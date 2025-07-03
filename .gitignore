@@ -1,2 +1,4 @@
-backend
+backend/api
+backend/media
+backend/redactor
 .idea
