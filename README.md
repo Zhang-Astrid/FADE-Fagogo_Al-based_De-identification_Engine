@@ -125,8 +125,7 @@ legal-doc-redactor/                      # 📦 项目根目录
 │       │       └── History.jsx          # 📋 历史任务列表
 │       │
 │       ├── api/                         # 🌐 与后端交互的 API 方法
-│       │   ├── redact.js                # 🔌 文档脱敏接口封装
-│       │   └── history.js               # 📜 历史记录API
+│       │   └── redact.js                # 🔌 文档脱敏接口封装
 │       │
 │       └── img/                         # 🖼️ 图标、图片资源
 │
