@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 
 const defaultFields = [
   { group: "个人身份信息", fields: [
@@ -44,6 +45,8 @@ export default function Config() {
   const [selected, setSelected] = useState({}); // {name: {checked: true, method: 'blur'}}
   const [customField, setCustomField] = useState("");
   const [templateName, setTemplateName] = useState("");
+  // week 2 简陋版，后续需要优化
+  const navigate = useNavigate();
 
   function handleFieldCheck(group, key, checked) {
     setSelected(sel => ({
@@ -74,6 +77,32 @@ export default function Config() {
   function handleSubmit() {
     // 跳转预览页
     window.location.href = "/preview";
+  }
+
+  // week 2 简陋版，后续需要优化
+  async function handleSelectAllAndPreview() {
+    // 固定使用后端media/pdfs/input.pdf作为演示文件
+    const demoFileName = 'input.pdf';
+    // 构造config参数：只传递被勾选的字段及其处理方式
+    const config = Object.entries(selected)
+      .filter(([, v]) => v.checked)
+      .reduce((acc, [key, v]) => {
+        acc[key] = v.method || 'blur';
+        return acc;
+      }, {});
+    try {
+      // 直接请求后端处理本地文件
+      const response = await fetch('/api/redact_all_demo/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: demoFileName, config })
+      });
+      if (!response.ok) throw new Error('处理失败');
+      const result = await response.json();
+      navigate('/preview', { state: { processedFile: result.file } });
+    } catch (e) {
+      alert('处理失败: ' + e.message);
+    }
   }
 
   return (
@@ -111,6 +140,8 @@ export default function Config() {
         <button className="config-btn" onClick={handleSaveTemplate} type="button">保存为模板</button>
       </div>
       <button className="config-main-btn" onClick={handleSubmit}>提交并预览</button>
+      {/* week 2 简陋版，后续需要优化 */}
+      <button className="config-main-btn" onClick={handleSelectAllAndPreview}>全部勾选并预览</button>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { uploadPDF } from "../../api/redact";
 
 // 模拟数据
 const recentRecords = [
@@ -14,11 +15,25 @@ export default function Dashboard() {
   const [modelStatus] = useState({ name: "轻量模型 v1.2", status: "正常运行", mode: "CPU模式" });
   const [todayStats] = useState({ total: 18, successRate: 97 });
   const [uploadFiles, setUploadFiles] = useState([]);
+  const [uploadStatus, setUploadStatus] = useState([]); // 新增：记录每个文件上传状态
 
   // 上传文件处理
-  function handleFileChange(e) {
+  async function handleFileChange(e) {
     const files = Array.from(e.target.files).filter(f => f.name.endsWith('.pdf'));
     setUploadFiles(files.map(f => ({ name: f.name, size: f.size, pages: Math.floor(Math.random()*10)+1 })));
+    // 上传并监测结果
+    const statusArr = [];
+    for (const file of files) {
+      try {
+        await uploadPDF(file);
+        statusArr.push({ name: file.name, status: 'success' });
+        // 只保留第一个文件对象用于后续处理
+        window.selectedPDFFile = file;
+      } catch {
+        statusArr.push({ name: file.name, status: 'fail' });
+      }
+    }
+    setUploadStatus(statusArr);
   }
 
   return (
@@ -63,7 +78,14 @@ export default function Dashboard() {
               <div className="dashboard-upload-list-title">已选文件</div>
               <ul>
                 {uploadFiles.map((f, i) => (
-                  <li key={i}>{f.name} <span>{f.pages}页</span> <span>{(f.size/1024).toFixed(1)}KB</span></li>
+                  <li key={i}>
+                    {f.name} <span>{f.pages}页</span> <span>{(f.size/1024).toFixed(1)}KB</span>
+                    {uploadStatus[i] && (
+                      <span style={{marginLeft:8, color: uploadStatus[i].status==='success'?'green':'red'}}>
+                        {uploadStatus[i].status==='success'?'上传成功':'上传失败'}
+                      </span>
+                    )}
+                  </li>
                 ))}
               </ul>
               <button className="dashboard-main-btn" onClick={()=>window.location.href='/config'}>去配置</button>
