@@ -23,10 +23,14 @@ FADE (Fagogo AI-based De-identification Engine) 是一个基于人工智能的�
 - 批量文档处理
 
 ### 🤖 AI脱敏引擎
-- 基于NLP的敏感信息识别
-- 智能实体识别（NER）
-- 自动脱敏处理
-- 可配置的脱敏规则
+- **智能OCR识别**: 基于RapidOCR的高精度文字识别
+- **NER实体识别**: 使用ERNIE-3.0中文预训练模型识别敏感实体
+- **多类型敏感信息检测**: 
+  - 姓名、地址、公司名（NER模型识别）
+  - 邮箱地址、长数字字母混合（正则表达式识别）
+- **精确坐标定位**: 智能映射敏感信息到图像坐标
+- **多种脱敏方式**: 马赛克、模糊、黑色遮盖
+- **批量处理**: 支持多页PDF文档批量脱敏
 
 ### 📊 结果管理
 - 处理结果预览
@@ -48,7 +52,7 @@ FADE (Fagogo AI-based De-identification Engine) 是一个基于人工智能的�
 - **数据库**: PostgreSQL 12.0+
 - **认证**: Token Authentication
 - **CORS**: django-cors-headers
-- **AI/ML**: PaddleOCR, LangChain, OpenAI
+- **AI/ML**: NER
 
 ### 前端技术栈
 - **框架**: React 19.1.0
@@ -58,11 +62,12 @@ FADE (Fagogo AI-based De-identification Engine) 是一个基于人工智能的�
 - **代码规范**: ESLint 9.29.0
 
 ### AI/ML 技术栈
-- **OCR**: PaddleOCR 2.6.1.3
-- **NLP**: LangChain 0.3.26
-- **大语言模型**: OpenAI GPT
-- **文档处理**: PyMuPDF, pdf2docx
-- **图像处理**: OpenCV, Pillow
+- **OCR**: RapidOCR 3.2.0 (基于PaddleOCR)
+- **NER模型**: ERNIE-3.0-base-chinese-finetuned-ner (gyr66/Ernie-3.0-base-chinese-finetuned-ner)
+- **NLP框架**: Transformers 4.53.1, HuggingFace Hub
+- **图像处理**: OpenCV 4.12.0, Pillow 11.3.0
+- **文档处理**: PyMuPDF, pdf2docx, img2pdf
+- **深度学习**: PyTorch 2.7.1, TorchVision 0.22.1
 
 ## 📦 项目结构
 
@@ -142,6 +147,7 @@ legal-doc-redactor/                      # 📦 项目根目录
 - **Node.js**: 16.0+ 
 - **Python**: 3.8+
 - **PostgreSQL**: 12.0+
+- **Conda**: 用于AI算法环境管理
 - **Git**: 最新版本
 
 ### 1. 克隆项目
@@ -261,13 +267,15 @@ npm run lint          # 代码规范检查
 DJANGO_SECRET_KEY=your-secret-key
 DATABASE_URL=postgresql://postgres:password@localhost:5432/legal_doc_redactor
 
-# AI服务配置
-OPENAI_API_KEY=your-openai-api-key
-PADDLE_OCR_MODEL_PATH=/path/to/ocr/model
+# AI算法配置
+NER_MODEL_PATH=gyr66/Ernie-3.0-base-chinese-finetuned-ner
+OCR_CONFIDENCE_THRESHOLD=0.6
+NER_CONFIDENCE_THRESHOLD=0.9
 
-# 文件存储配置
-MEDIA_ROOT=/path/to/media/files
-STATIC_ROOT=/path/to/static/files
+# 脱敏处理配置
+MOSAIC_SIZE=
+BLUR_KERNEL_SIZE=
+COVER_METHODS={"company":"black","name":"blur","address":"black","email":"blur","sens_number":"black"}
 ```
 
 ### CORS配置
@@ -293,6 +301,13 @@ CORS_ALLOWED_ORIGINS = [
 - `GET /api/history/` - 获取处理历史
 - `GET /api/results/{task_id}/` - 获取处理结果
 
+### AI算法核心功能
+- **OCR文字识别**: 基于RapidOCR的高精度文字提取
+- **NER实体识别**: 使用ERNIE-3.0模型识别敏感实体
+- **坐标映射**: 精确计算敏感信息在图像中的位置
+- **脱敏处理**: 支持马赛克、模糊、黑色遮盖三种方式
+- **批量处理**: 支持多页PDF文档的批量脱敏
+
 ## 🧪 测试
 
 ### 后端测试
@@ -306,3 +321,54 @@ python manage.py test
 cd frontend
 npm test
 ```
+
+### AI算法测试
+```bash
+cd ner
+conda activate dog_env
+python nlp.py  # 测试NER模型
+python execute.py  # 测试完整脱敏流程
+```
+
+## 🤖 AI算法技术细节
+
+### 敏感信息检测流程
+1. **PDF转图像**: 使用pdf2image将PDF页面转换为高分辨率图像
+2. **OCR文字识别**: 使用RapidOCR提取图像中的文字内容和坐标信息
+3. **文本预处理**: 将OCR结果按顺序拼接，用特殊分隔符分隔
+4. **NER实体识别**: 使用ERNIE-3.0模型识别敏感实体（姓名、地址、公司名）
+5. **正则匹配**: 使用正则表达式识别邮箱和长数字字母混合
+6. **坐标映射**: 将识别出的敏感信息映射回原始图像坐标
+7. **脱敏处理**: 根据配置对敏感区域进行马赛克、模糊或遮盖处理
+
+### 支持的敏感信息类型
+- **姓名** (NER模型识别) - 使用模糊处理
+- **地址** (NER模型识别) - 使用黑色遮盖
+- **公司名** (NER模型识别) - 使用黑色遮盖
+- **邮箱地址** (正则表达式) - 使用模糊处理
+- **长数字字母混合** (正则表达式) - 使用黑色遮盖
+
+### 性能优化
+- **缓存机制**: OCR结果缓存到JSON文件，避免重复处理
+- **批量处理**: 支持多页PDF文档的批量脱敏
+- **内存管理**: 逐页处理大文档，避免内存溢出
+- **GPU加速**: 支持GPU加速NER模型推理
+
+## 📦 部署
+
+### 生产环境部署
+1. 设置环境变量
+2. 配置数据库
+3. 配置AI算法环境（Conda）
+4. 收集静态文件
+5. 配置Web服务器（Nginx）
+6. 使用Gunicorn运行Django
+
+### AI算法部署注意事项
+- 确保NER模型已正确下载（首次运行会自动下载）
+- 配置足够的GPU内存用于模型推理
+- 设置合适的OCR和NER置信度阈值
+- 配置脱敏处理参数（马赛克大小、模糊核大小等）
+---
+
+**注意**: 本项目仍在积极开发中，API接口和功能可能会发生变化。请关注项目更新。
