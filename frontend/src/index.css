@@ -332,11 +332,46 @@ App 根布局：使用Grid分为导航和内容区
   justify-content: center;
   margin: 18px 0 10px 0;
   cursor: pointer;
-  transition: border 0.2s;
+  transition: all 0.2s ease;
+  position: relative;
 }
 .dashboard-upload-dropzone:hover {
   border-color: #2563eb;
   color: #2563eb;
+  background: #f0f7ff;
+}
+.dashboard-upload-dropzone.drag-over {
+  border-color: #2563eb;
+  border-style: solid;
+  background: #f0f7ff;
+  color: #2563eb;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+.dashboard-upload-dropzone.drag-over::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px dashed #2563eb;
+  border-radius: 8px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .dashboard-upload-list {
   margin-top: 10px;

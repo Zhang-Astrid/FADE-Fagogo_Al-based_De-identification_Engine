@@ -1,38 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import { processDocument, getDocumentDetail } from "../../api/redact";
 
+// 只保留detector.py支持的五类敏感信息类型
 const defaultFields = [
-  { group: "个人身份信息", fields: [
-    { key: "name", label: "姓名" },
-    { key: "id", label: "身份证号码" },
-    { key: "gender", label: "性别" },
-    { key: "birth", label: "出生日期" },
-  ]},
-  { group: "联系方式", fields: [
-    { key: "mobile", label: "手机号码" },
-    { key: "phone", label: "固定电话" },
-    { key: "email", label: "邮箱" },
-  ]},
-  { group: "住址信息", fields: [
-    { key: "address", label: "居住地址" },
-    { key: "work_address", label: "单位地址" },
-  ]},
-  { group: "职业与单位信息", fields: [
-    { key: "work_name", label: "工作单位名称" },
-    { key: "job_title", label: "职务" },
-  ]},
-  { group: "财务信息", fields: [
-    { key: "bank_account", label: "银行卡号/账号" },
-    { key: "social_account", label: "社保、公积金账户" },
-  ]},
-  { group: "法律涉案信息", fields: [
-    { key: "case_number", label: "证据材料编号、立案编号" },
-    { key: "litigant", label: "当事人/证人信息" },
-  ]},
-  { group: "生物识别信息（如签名及照片）", fields: [
-    { key: "bio", label: "照片、签名、指纹图像" },
+  { group: "敏感信息类型", fields: [
+    { key: "name", label: "姓名 (NER)" },
+    { key: "address", label: "地址 (NER)" },
+    { key: "company", label: "公司名 (NER)" },
+    { key: "email", label: "邮箱 (正则)" },
+    { key: "sens_number", label: "长数字字母混合 (正则)" },
   ]},
 ];
+
 const methodOptions = [
   { value: "blur", label: "模糊(高斯模糊)" },
   { value: "cover", label: "遮挡(黑条)" },
@@ -45,8 +25,31 @@ export default function Config() {
   const [selected, setSelected] = useState({}); // {name: {checked: true, method: 'blur'}}
   const [customField, setCustomField] = useState("");
   const [templateName, setTemplateName] = useState("");
-  // week 2 简陋版，后续需要优化
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [documentInfo, setDocumentInfo] = useState(null);
+  
   const navigate = useNavigate();
+
+  // 获取当前选中的文档信息
+  useEffect(() => {
+    const documentCode = window.selectedDocumentCode;
+    if (documentCode) {
+      loadDocumentInfo(documentCode);
+    }
+  }, []);
+
+  const loadDocumentInfo = async (documentCode) => {
+    try {
+      const result = await getDocumentDetail(documentCode);
+      if (result.success) {
+        setDocumentInfo(result.document);
+      }
+    } catch (err) {
+      console.error('获取文档信息失败:', err);
+      setError('获取文档信息失败');
+    }
+  };
 
   function handleFieldCheck(group, key, checked) {
     setSelected(sel => ({
@@ -54,12 +57,14 @@ export default function Config() {
       [key]: { ...sel[key], checked }
     }));
   }
+  
   function handleMethodChange(key, method) {
     setSelected(sel => ({
       ...sel,
       [key]: { ...sel[key], method }
     }));
   }
+  
   function handleAddCustomField() {
     if (!customField.trim()) return;
     setFields(f => [
@@ -68,21 +73,21 @@ export default function Config() {
     ]);
     setCustomField("");
   }
+  
   function handleSaveTemplate() {
     if (!templateName.trim()) return;
     // 模板保存逻辑（可扩展）
     setTemplateName("");
     alert("模板已保存");
   }
-  function handleSubmit() {
-    // 跳转预览页
-    window.location.href = "/preview";
-  }
+  
+  async function handleSubmit() {
+    const documentCode = window.selectedDocumentCode;
+    if (!documentCode) {
+      setError('请先上传文档');
+      return;
+    }
 
-  // week 2 简陋版，后续需要优化
-  async function handleSelectAllAndPreview() {
-    // 固定使用后端media/pdfs/input.pdf作为演示文件
-    const demoFileName = 'input.pdf';
     // 构造config参数：只传递被勾选的字段及其处理方式
     const config = Object.entries(selected)
       .filter(([, v]) => v.checked)
@@ -90,24 +95,102 @@ export default function Config() {
         acc[key] = v.method || 'blur';
         return acc;
       }, {});
+
+    if (Object.keys(config).length === 0) {
+      setError('请至少选择一个字段进行处理');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
     try {
-      // 直接请求后端处理本地文件
-      const response = await fetch('/api/redact_all_demo/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: demoFileName, config })
+      const result = await processDocument(documentCode, config);
+      if (result.success) {
+        // 跳转到预览页面，传递处理结果
+        navigate('/preview', { 
+          state: { 
+            processedDocument: result.processed_document,
+            documentInfo: documentInfo
+          } 
+        });
+      } else {
+        setError(result.error || '处理失败');
+      }
+    } catch (err) {
+      console.error('处理失败:', err);
+      setError(err.message || '处理失败');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 全部勾选并预览（演示功能）
+  async function handleSelectAllAndPreview() {
+    const documentCode = window.selectedDocumentCode;
+    if (!documentCode) {
+      setError('请先上传文档');
+      return;
+    }
+
+    // 自动勾选所有字段
+    const allConfig = {};
+    fields.forEach(group => {
+      group.fields.forEach(field => {
+        allConfig[field.key] = 'blur'; // 默认使用模糊处理
       });
-      if (!response.ok) throw new Error('处理失败');
-      const result = await response.json();
-      navigate('/preview', { state: { processedFile: result.file } });
-    } catch (e) {
-      alert('处理失败: ' + e.message);
+    });
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const result = await processDocument(documentCode, allConfig);
+      if (result.success) {
+        navigate('/preview', { 
+          state: { 
+            processedDocument: result.processed_document,
+            documentInfo: documentInfo
+          } 
+        });
+      } else {
+        setError(result.error || '处理失败');
+      }
+    } catch (err) {
+      console.error('处理失败:', err);
+      setError(err.message || '处理失败');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
     <div className="config-root">
       <h1 className="config-title">脱敏配置</h1>
+      
+      {error && (
+        <div style={{ 
+          background: '#fee', 
+          color: '#c33', 
+          padding: '12px', 
+          borderRadius: '6px', 
+          marginBottom: '16px' 
+        }}>
+          {error}
+        </div>
+      )}
+
+      {documentInfo && (
+        <div style={{ 
+          background: '#e8f4fd', 
+          padding: '12px', 
+          borderRadius: '6px', 
+          marginBottom: '16px' 
+        }}>
+          <strong>当前文档:</strong> {documentInfo.filename} ({documentInfo.file_size_mb}MB)
+        </div>
+      )}
+      
       <div className="config-card">
         <div className="config-section-title">字段勾选与方式选择</div>
         <div className="config-field-groups">
@@ -117,10 +200,19 @@ export default function Config() {
               <div className="config-field-list">
                 {g.fields.map(f => (
                   <div className="config-field-item" key={f.key}>
-                    <input type="checkbox" id={f.key} checked={selected[f.key]?.checked||false} onChange={e=>handleFieldCheck(g.group, f.key, e.target.checked)} />
+                    <input 
+                      type="checkbox" 
+                      id={f.key} 
+                      checked={selected[f.key]?.checked||false} 
+                      onChange={e=>handleFieldCheck(g.group, f.key, e.target.checked)} 
+                    />
                     <label htmlFor={f.key}>{f.label}</label>
                     {selected[f.key]?.checked && (
-                      <select className="config-method-select" value={selected[f.key]?.method||methodOptions[0].value} onChange={e=>handleMethodChange(f.key, e.target.value)}>
+                      <select 
+                        className="config-method-select" 
+                        value={selected[f.key]?.method||methodOptions[0].value} 
+                        onChange={e=>handleMethodChange(f.key, e.target.value)}
+                      >
                         {methodOptions.map(opt => <option value={opt.value} key={opt.value}>{opt.label}</option>)}
                       </select>
                     )}
@@ -131,17 +223,42 @@ export default function Config() {
           ))}
         </div>
         <div className="config-custom-field-row">
-          <input className="config-custom-field-input" placeholder="自定义字段名" value={customField} onChange={e=>setCustomField(e.target.value)} />
+          <input 
+            className="config-custom-field-input" 
+            placeholder="自定义字段名" 
+            value={customField} 
+            onChange={e=>setCustomField(e.target.value)} 
+          />
           <button className="config-btn" onClick={handleAddCustomField} type="button">添加字段</button>
         </div>
       </div>
+      
       <div className="config-card config-template-row">
-        <input className="config-template-input" placeholder="模板名称" value={templateName} onChange={e=>setTemplateName(e.target.value)} />
+        <input 
+          className="config-template-input" 
+          placeholder="模板名称" 
+          value={templateName} 
+          onChange={e=>setTemplateName(e.target.value)} 
+        />
         <button className="config-btn" onClick={handleSaveTemplate} type="button">保存为模板</button>
       </div>
-      <button className="config-main-btn" onClick={handleSubmit}>提交并预览</button>
-      {/* week 2 简陋版，后续需要优化 */}
-      <button className="config-main-btn" onClick={handleSelectAllAndPreview}>全部勾选并预览</button>
+      
+      <button 
+        className="config-main-btn" 
+        onClick={handleSubmit}
+        disabled={loading}
+      >
+        {loading ? '处理中...' : '提交并预览'}
+      </button>
+      
+      <button 
+        className="config-main-btn" 
+        onClick={handleSelectAllAndPreview}
+        disabled={loading}
+        style={{ marginLeft: '12px' }}
+      >
+        {loading ? '处理中...' : '全部勾选并预览'}
+      </button>
     </div>
   );
 }
