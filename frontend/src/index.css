@@ -1,73 +1,4 @@
-/*
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-*/
 
 /* 
 App 根布局：使用Grid分为导航和内容区 
@@ -126,199 +57,138 @@ App 根布局：使用Grid分为导航和内容区
 }
 
 /* =========================
-   Dashboard 页面
+   Dashboard 页面样式
    ========================= */
 .dashboard-root {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr;
   gap: 32px;
 }
+
 .dashboard-title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 16px;
+  margin: 0;
   color: #222;
 }
-.dashboard-main-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
+
+.dashboard-error {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
 }
-@media (max-width: 900px) {
-  .dashboard-main-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.dashboard-upload-area,
-.dashboard-field-selector {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 32px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.dashboard-section-title {
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #333;
-}
-.dashboard-upload-dropzone {
-  border: 2px dashed #bfc7d1;
-  border-radius: 8px;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #bfc7d1;
-  background: #f7f9fa;
-  font-size: 1.1rem;
-}
-.dashboard-upload-tip {
-  margin-top: 12px;
-  font-size: 0.95rem;
-  color: #888;
-}
-.dashboard-field-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dashboard-field-tip {
-  margin-top: 12px;
-  font-size: 0.85rem;
-  color: #bbb;
-}
-.dashboard-upload-list {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 32px 24px;
-  margin-top: 32px;
-}
-.dashboard-upload-list-empty {
-  color: #bfc7d1;
-  font-size: 1rem;
-  margin-top: 8px;
-}
-.dashboard-field-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.dashboard-field-group {
-  background: #f7f9fa;
-  border-radius: 8px;
-  padding: 16px 16px 10px 16px;
-  margin-bottom: 0;
-}
-.dashboard-field-group-title {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #2563eb;
-  margin-bottom: 10px;
-  letter-spacing: 1px;
-}
+
 .dashboard-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
-  margin-top: 24px;
 }
+
 @media (max-width: 900px) {
   .dashboard-cards-grid {
     grid-template-columns: 1fr;
   }
 }
-.dashboard-info-card, .dashboard-upload-card {
+
+.dashboard-info-card,
+.dashboard-upload-card {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   padding: 32px 28px 28px 28px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 18px;
 }
+
 .dashboard-info-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 16px;
-  margin-bottom: 8px;
 }
+
 .dashboard-model-status {
   display: inline-block;
-  width: 12px; height: 12px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  margin-right: 6px;
   background: #bbb;
 }
-.dashboard-model-status.ok { background: #22c55e; }
-.dashboard-model-status.fail { background: #ef4444; }
+
+.dashboard-model-status.ok {
+  background: #22c55e;
+}
+
+.dashboard-model-status.fail {
+  background: #ef4444;
+}
+
 .dashboard-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 48px;
   margin: 18px 0 8px 0;
 }
+
 .dashboard-stats-num {
   font-size: 2.2rem;
   font-weight: bold;
   color: #2563eb;
 }
+
 .dashboard-stats-label {
   font-size: 0.98rem;
   color: #888;
 }
+
 .dashboard-recent {
-  flex-direction: column;
-  align-items: flex-start;
+  display: grid;
   gap: 6px;
 }
+
 .dashboard-recent-title {
   font-weight: 600;
   color: #333;
-  margin-bottom: 4px;
+  margin: 0;
 }
+
 .dashboard-recent-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: grid;
+  gap: 2px;
 }
+
 .dashboard-recent-item {
   font-size: 1rem;
   color: #444;
-  margin-bottom: 2px;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
+  gap: 8px;
 }
+
 .dashboard-recent-item.success::before {
   content: '✔';
   color: #22c55e;
   margin-right: 6px;
 }
+
 .dashboard-recent-item.fail::before {
   content: '✖';
   color: #ef4444;
   margin-right: 6px;
 }
-.dashboard-main-btn {
-  margin-top: 18px;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 12px 32px;
-  font-size: 1.1rem;
+
+.dashboard-section-title {
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
+  color: #333;
+  margin: 0;
 }
-.dashboard-main-btn:hover {
-  background: #1d4ed8;
-}
-.dashboard-upload-card {
-  align-items: flex-start;
-}
+
 .dashboard-upload-dropzone {
   width: 100%;
   min-height: 90px;
@@ -327,19 +197,20 @@ App 根布局：使用Grid分为导航和内容区
   background: #f7f9fa;
   color: #bfc7d1;
   font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   margin: 18px 0 10px 0;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
+
 .dashboard-upload-dropzone:hover {
   border-color: #2563eb;
   color: #2563eb;
   background: #f0f7ff;
 }
+
 .dashboard-upload-dropzone.drag-over {
   border-color: #2563eb;
   border-style: solid;
@@ -348,6 +219,7 @@ App 根布局：使用Grid分为导航和内容区
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
 }
+
 .dashboard-upload-dropzone.drag-over::before {
   content: '';
   position: absolute;
@@ -359,6 +231,7 @@ App 根布局：使用Grid分为导航和内容区
   border-radius: 8px;
   animation: pulse 1.5s infinite;
 }
+
 @keyframes pulse {
   0% {
     opacity: 1;
@@ -373,28 +246,234 @@ App 根布局：使用Grid分为导航和内容区
     transform: scale(1);
   }
 }
+
 .dashboard-upload-list {
   margin-top: 10px;
   width: 100%;
 }
+
 .dashboard-upload-list-title {
   font-weight: 600;
   color: #333;
   margin-bottom: 6px;
 }
+
 .dashboard-upload-list ul {
   list-style: none;
   padding: 0;
   margin: 0 0 8px 0;
+  display: grid;
+  gap: 2px;
 }
+
 .dashboard-upload-list li {
   font-size: 1rem;
   color: #444;
-  margin-bottom: 2px;
-  display: flex;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
+  gap: 16px;
 }
+
+.dashboard-upload-list-table {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 2fr;
+  gap: 0;
+  width: 100%;
+}
+.dashboard-upload-list-header {
+  display: contents;
+}
+.dashboard-upload-list-header span {
+  font-weight: bold;
+  color: #333;
+  padding-bottom: 6px;
+  padding-left: 10px;
+  padding-top: 6px;
+  border-bottom: 1px solid #eee;
+  background: #f7f9fa;
+  font-size: 1rem;
+}
+.dashboard-upload-list-row {
+  display: contents;
+}
+.dashboard-upload-list-row span {
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 1rem;
+  color: #444;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dashboard-upload-list-row .file-name {
+  max-width: 220px;
+}
+.dashboard-upload-status {
+  margin-left: 0;
+}
+
+.dashboard-upload-status.success {
+  color: green;
+}
+
+.dashboard-upload-status.duplicate {
+  color: orange;
+}
+
+.dashboard-upload-status.fail {
+  color: red;
+}
+
+
+
+  
+  /* =========================
+     UploadList 组件样式
+     ========================= */
+  .upload-list-container {
+    margin-top: 32px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 32px 24px;
+  }
+  
+  .upload-list-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .upload-list-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .upload-list-title {
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+  }
+  
+  .upload-list-controls {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 10px;
+  }
+  
+  .upload-list-select-all {
+    justify-self: start;
+  }
+  
+  .upload-list-select-all input[type="checkbox"] {
+    margin: 0;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+  
+  .upload-list-btn-group {
+    display: grid;
+    grid-auto-flow: column;
+    gap: 10px;
+    justify-self: end;
+  }
+  
+  .upload-list-process-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .upload-list-process-btn:hover {
+    background: #1d4ed8;
+  }
+  
+  .upload-list-delete-btn {
+    background: #ef4444;
+  }
+  .upload-list-delete-btn:hover {
+    background: #b91c1c;
+  }
+  
+  .upload-list-documents {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  
+  .upload-list-document-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .upload-list-document-item:last-child {
+    border-bottom: none;
+  }
+  
+  .upload-list-document-checkbox {
+    margin: 0;
+    accent-color: #2563eb;
+    cursor: pointer;
+  }
+  
+  .upload-list-document-name {
+    font-size: 1rem;
+    color: #444;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .upload-list-document-size {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: right;
+  }
+  
+  .upload-list-document-pages {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: right;
+  }
+  
+  .upload-list-document-status {
+    font-size: 0.9rem;
+    text-align: right;
+  }
+  
+  .upload-list-document-status.uploaded {
+    color: #2563eb;
+  }
+  
+  .upload-list-document-status.processing {
+    color: #f59e0b;
+  }
+  
+  .upload-list-document-status.processed {
+    color: #22c55e;
+  }
+  
+  .upload-list-document-status.failed {
+    color: #ef4444;
+  }
+    
 
 /* =========================
    Config（处理配置）页面
@@ -1087,4 +1166,3 @@ App 根布局：使用Grid分为导航和内容区
   font-size: 0.98rem;
   color: #444;
 }
-

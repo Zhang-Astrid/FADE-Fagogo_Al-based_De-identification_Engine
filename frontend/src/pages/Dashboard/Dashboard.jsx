@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { uploadPDF, getUserDocuments } from "../../api/redact";
+import UploadList from "./UploadList";
 
 export default function Dashboard() {
   // 状态管理
@@ -124,30 +125,35 @@ export default function Dashboard() {
     status: doc.status === 'processed' ? 'success' : doc.status === 'failed' ? 'fail' : 'pending'
   }));
 
+  const getUploadStatusClass = (status) => {
+    switch (status) {
+      case 'success': return 'success';
+      case 'duplicate': return 'duplicate';
+      case 'fail': return 'fail';
+      default: return '';
+    }
+  };
+
   return (
-    <div className="dashboard-root">
-      <h1 className="dashboard-title">FADE -- PDF脱敏处理系统</h1>
+    <main className="dashboard-root">
+      <header>
+        <h1 className="dashboard-title">FADE -- PDF脱敏处理系统</h1>
+      </header>
       
       {error && (
-        <div style={{ 
-          background: '#fee', 
-          color: '#c33', 
-          padding: '12px', 
-          borderRadius: '6px', 
-          marginBottom: '16px' 
-        }}>
+        <div className="dashboard-error">
           {error}
         </div>
       )}
       
-      <div className="dashboard-cards-grid">
+      <section className="dashboard-cards-grid">
         {/* 信息卡片 */}
-        <div className="dashboard-info-card">
+        <article className="dashboard-info-card">
           <div className="dashboard-info-row">
             <span className={`dashboard-model-status ${modelStatus.status === '正常运行' ? 'ok' : 'fail'}`}></span>
-            <span>{modelStatus.name} <b>{modelStatus.status}</b> / {modelStatus.mode}</span>
+            <span>{modelStatus.name} <strong>{modelStatus.status}</strong> / {modelStatus.mode}</span>
           </div>
-          <div className="dashboard-info-row dashboard-stats">
+          <div className="dashboard-stats">
             <div>
               <div className="dashboard-stats-num">{todayStats.total}</div>
               <div className="dashboard-stats-label">今日处理总数</div>
@@ -157,13 +163,14 @@ export default function Dashboard() {
               <div className="dashboard-stats-label">敏感字段识别成功率</div>
             </div>
           </div>
-          <div className="dashboard-info-row dashboard-recent">
-            <div className="dashboard-recent-title">最近处理</div>
+          <div className="dashboard-recent">
+            <h3 className="dashboard-recent-title">最近处理</h3>
             <ul className="dashboard-recent-list">
               {recentRecords.length > 0 ? (
                 recentRecords.map((r, i) => (
                   <li key={i} className={`dashboard-recent-item ${r.status}`}>
-                    {r.name} <span>{r.time}</span>
+                    <span>{r.name}</span>
+                    <span>{r.time}</span>
                   </li>
                 ))
               ) : (
@@ -171,18 +178,11 @@ export default function Dashboard() {
               )}
             </ul>
           </div>
-          <button 
-            className="dashboard-main-btn" 
-            onClick={() => window.location.href = '/config'}
-            disabled={loading}
-          >
-            {loading ? '处理中...' : '开始处理'}
-          </button>
-        </div>
+        </article>
         
         {/* 快捷上传卡片 */}
-        <div className="dashboard-upload-card">
-          <div className="dashboard-section-title">快捷上传PDF</div>
+        <article className="dashboard-upload-card">
+          <h3 className="dashboard-section-title">快捷上传PDF</h3>
           <div 
             ref={dropzoneRef}
             className={`dashboard-upload-dropzone ${isDragOver ? 'drag-over' : ''}`}
@@ -208,63 +208,36 @@ export default function Dashboard() {
           
           {uploadFiles.length > 0 && (
             <div className="dashboard-upload-list">
-              <div className="dashboard-upload-list-title">已选文件</div>
-              <ul>
+              {/* <h4 className="dashboard-upload-list-title">上传文件</h4> */}
+              <div className="dashboard-upload-list-table">
+                <div className="dashboard-upload-list-header">
+                  <span>文件名</span>
+                  <span>页数</span>
+                  <span>大小</span>
+                  <span>状态</span>
+                </div>
                 {uploadFiles.map((f, i) => (
-                  <li key={i}>
-                    {f.name} <span>{f.pages}页</span> <span>{(f.size/1024).toFixed(1)}KB</span>
-                    {uploadStatus[i] && (
-                      <span style={{
-                        marginLeft: 8, 
-                        color: uploadStatus[i].status === 'success' ? 'green' : 
-                               uploadStatus[i].status === 'duplicate' ? 'orange' : 'red'
-                      }}>
-                        {uploadStatus[i].status === 'success' ? '上传成功' : 
-                         uploadStatus[i].status === 'duplicate' ? uploadStatus[i].message : 
-                         `上传失败: ${uploadStatus[i].error}`}
-                      </span>
-                    )}
-                  </li>
+                  <div className="dashboard-upload-list-row" key={i}>
+                    <span className="file-name">{f.name}</span>
+                    <span>{f.pages}页</span>
+                    <span>{(f.size/1024).toFixed(1)}KB</span>
+                    <span>
+                      {uploadStatus[i] && (
+                        <span className={`dashboard-upload-status ${getUploadStatusClass(uploadStatus[i].status)}`}>
+                          {uploadStatus[i].status}
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 ))}
-              </ul>
-              {uploadStatus.some(s => s.status === 'success' || s.status === 'duplicate') && (
-                <button 
-                  className="dashboard-main-btn" 
-                  onClick={() => window.location.href = '/config'}
-                  disabled={loading}
-                >
-                  去配置
-                </button>
-              )}
+              </div>
             </div>
           )}
-        </div>
-      </div>
+        </article>
+      </section>
       
       {/* 用户文档列表 */}
-      {userDocuments.length > 0 && (
-        <div className="dashboard-upload-list" style={{ marginTop: '32px' }}>
-          <div className="dashboard-upload-list-title">我的文档</div>
-          <ul>
-            {userDocuments.map((doc, i) => (
-              <li key={i}>
-                {doc.filename} 
-                <span>{doc.file_size_mb}MB</span> 
-                <span>{doc.page_count}页</span>
-                <span style={{
-                  marginLeft: 8,
-                  color: doc.status === 'processed' ? 'green' : 
-                         doc.status === 'failed' ? 'red' : 'orange'
-                }}>
-                  {doc.status === 'uploaded' ? '已上传' :
-                   doc.status === 'processing' ? '处理中' :
-                   doc.status === 'processed' ? '已处理' : '处理失败'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+      <UploadList userDocuments={userDocuments} />
+    </main>
   );
 }

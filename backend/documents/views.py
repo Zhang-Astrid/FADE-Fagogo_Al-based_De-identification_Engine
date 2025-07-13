@@ -15,6 +15,7 @@ from .serializers import (
     DocumentSerializer, ProcessedDocumentSerializer, ProcessingLogSerializer,
     DocumentUploadSerializer, DocumentConfigSerializer
 )
+import fitz  # PyMuPDF
 
 def calculate_file_hash(file):
     """计算文件的MD5哈希值"""
@@ -83,6 +84,16 @@ def upload_document(request):
                 'duplicate_reason': duplicate_check['reason']
             }, status=status.HTTP_409_CONFLICT)
         
+        # 读取PDF页数
+        page_count = 0
+        try:
+            uploaded_file.seek(0)
+            doc = fitz.open(stream=uploaded_file.read(), filetype='pdf')
+            page_count = doc.page_count
+            uploaded_file.seek(0)
+        except Exception as e:
+            page_count = 0
+        
         # 创建文档记录
         document = Document.objects.create(
             user=request.user,
@@ -90,6 +101,7 @@ def upload_document(request):
             filename=uploaded_file.name,
             file_size=uploaded_file.size,
             file_hash=file_hash,
+            page_count=page_count,
             status='uploaded'
         )
         
