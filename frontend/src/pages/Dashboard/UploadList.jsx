@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { deleteDocument } from '../../api/redact';
+import { useNavigate } from 'react-router-dom';
 
 export default function UploadList({ userDocuments }) {
   const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const navigate = useNavigate();
 
   if (!userDocuments || userDocuments.length === 0) {
     return null;
@@ -22,23 +24,25 @@ export default function UploadList({ userDocuments }) {
     if (selectedDocuments.length === userDocuments.length) {
       setSelectedDocuments([]);
     } else {
-      setSelectedDocuments(userDocuments.map(doc => doc.id));
+      setSelectedDocuments(userDocuments.map(doc => doc.id || doc.document_code));
     }
   };
 
   const handleProcessSelected = () => {
     if (selectedDocuments.length > 0) {
-      // 保存选中的文档信息到全局变量
-      const selectedDocs = userDocuments.filter(doc => selectedDocuments.includes(doc.id));
-      window.selectedDocuments = selectedDocs;
-      window.location.href = '/config';
+      // 通过state传递选中的文档信息
+      const selectedDocs = userDocuments.filter(doc => 
+        selectedDocuments.includes(doc.id || doc.document_code)
+      );
+      console.log('选中的文档:', selectedDocs); // 调试信息
+      navigate('/config', { state: { selectedDocuments: selectedDocs } });
     }
   };
 
   const handleDeleteSelected = async () => {
     if (selectedDocuments.length > 0) {
       for (const docId of selectedDocuments) {
-        const doc = userDocuments.find(d => d.id === docId);
+        const doc = userDocuments.find(d => (d.id || d.document_code) === docId);
         if (doc) {
           try {
             await deleteDocument(doc.document_code);
@@ -115,8 +119,8 @@ export default function UploadList({ userDocuments }) {
             <input
               type="checkbox"
               className="upload-list-document-checkbox"
-              checked={selectedDocuments.includes(doc.id)}
-              onChange={() => handleDocumentSelect(doc.id)}
+              checked={selectedDocuments.includes(doc.id || doc.document_code)}
+              onChange={() => handleDocumentSelect(doc.id || doc.document_code)}
             />
             <span className="upload-list-document-name">{doc.filename}</span>
             <span className="upload-list-document-size">{doc.file_size_mb}MB</span>

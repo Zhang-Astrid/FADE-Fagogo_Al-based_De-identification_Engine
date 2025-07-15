@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { processDocument, getDocumentDetail } from "../../api/redact";
 
 // 只保留detector.py支持的五类敏感信息类型
@@ -28,16 +28,47 @@ export default function Config() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
   
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 获取当前选中的文档信息
   useEffect(() => {
+    // 检查是否从预览页面返回
+    if (location.state?.fromPreview) {
+      const { documentCode, currentConfig } = location.state;
+      setDocumentInfo({ document_code: documentCode });
+      
+      // 恢复之前的配置
+      const restoredConfig = {};
+      Object.entries(currentConfig).forEach(([key, method]) => {
+        restoredConfig[key] = { checked: true, method };
+      });
+      setSelected(restoredConfig);
+      
+      console.log('Config页面 - 从预览页面返回，恢复配置:', currentConfig);
+      return;
+    }
+    
+    // 优先用location.state传递的数据
+    const docs = location.state?.selectedDocuments;
+    if (docs && docs.length > 0) {
+      setSelectedDocuments(docs);
+      if (docs.length === 1) {
+        setDocumentInfo(docs[0]);
+      }
+      console.log('Config页面 - 来自location.state:', docs);
+      return;
+    }
+    // 兼容单个文档处理
     const documentCode = window.selectedDocumentCode;
     if (documentCode) {
       loadDocumentInfo(documentCode);
+      return;
     }
-  }, []);
+    console.log('没有找到选中的文档信息');
+  }, [location.state]);
 
   const loadDocumentInfo = async (documentCode) => {
     try {
@@ -82,9 +113,14 @@ export default function Config() {
   }
   
   async function handleSubmit() {
-    const documentCode = window.selectedDocumentCode;
-    if (!documentCode) {
-      setError('请先上传文档');
+    // 获取要处理的文档代码
+    let documentCodes = [];
+    if (selectedDocuments.length > 0) {
+      documentCodes = selectedDocuments.map(doc => doc.document_code);
+    } else if (window.selectedDocumentCode) {
+      documentCodes = [window.selectedDocumentCode];
+    } else {
+      setError('请先选择要处理的文档');
       return;
     }
 
@@ -101,21 +137,73 @@ export default function Config() {
       return;
     }
 
+    // 添加调试信息
+    console.log('=== 发送给后端的参数 ===');
+    console.log('文档代码:', documentCodes);
+    console.log('配置参数:', config);
+    console.log('选中的字段详情:', selected);
+    console.log('========================');
+
     setLoading(true);
     setError('');
 
     try {
-      const result = await processDocument(documentCode, config);
-      if (result.success) {
-        // 跳转到预览页面，传递处理结果
-        navigate('/preview', { 
-          state: { 
-            processedDocument: result.processed_document,
-            documentInfo: documentInfo
-          } 
-        });
+      // 批量处理所有选中的文档
+      const results = [];
+      for (const documentCode of documentCodes) {
+        try {
+          console.log(`正在处理文档: ${documentCode}`);
+          const result = await processDocument(documentCode, config);
+          console.log(`文档 ${documentCode} 处理结果:`, result);
+          results.push({
+            documentCode,
+            success: result.success,
+            data: result
+          });
+        } catch (err) {
+          console.error(`文档 ${documentCode} 处理失败:`, err);
+          results.push({
+            documentCode,
+            success: false,
+            error: err.message
+          });
+        }
+      }
+
+      // 检查处理结果
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.length;
+
+      console.log('=== 处理结果汇总 ===');
+      console.log('总文档数:', totalCount);
+      console.log('成功处理数:', successCount);
+      console.log('详细结果:', results);
+      console.log('==================');
+
+      if (successCount === 0) {
+        setError('所有文档处理失败');
+      } else if (successCount < totalCount) {
+        setError(`部分文档处理失败，成功处理 ${successCount}/${totalCount} 个文档`);
       } else {
-        setError(result.error || '处理失败');
+        // 全部成功，显示成功消息
+        alert(`成功处理 ${successCount} 个文档！`);
+        
+        // 如果是单个文档处理，跳转到预览页面
+        if (documentCodes.length === 1) {
+          const processedDocumentId = results[0].data.processed_document.id;
+          navigate('/preview', {
+            state: {
+              documentCode: documentCodes[0],
+              processedDocumentId: processedDocumentId
+            }
+          });
+        } else {
+          // 批量处理完成，返回Dashboard页面
+          window.selectedDocuments = [];
+          window.selectedDocumentCodes = [];
+          window.selectedDocumentCode = null;
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       console.error('处理失败:', err);
@@ -125,11 +213,16 @@ export default function Config() {
     }
   }
 
-  // 全部勾选并预览（演示功能）
-  async function handleSelectAllAndPreview() {
-    const documentCode = window.selectedDocumentCode;
-    if (!documentCode) {
-      setError('请先上传文档');
+  // 全部勾选并处理（演示功能）
+  async function handleSelectAllAndProcess() {
+    // 获取要处理的文档代码
+    let documentCodes = [];
+    if (selectedDocuments.length > 0) {
+      documentCodes = selectedDocuments.map(doc => doc.document_code);
+    } else if (window.selectedDocumentCode) {
+      documentCodes = [window.selectedDocumentCode];
+    } else {
+      setError('请先选择要处理的文档');
       return;
     }
 
@@ -145,16 +238,42 @@ export default function Config() {
     setError('');
 
     try {
-      const result = await processDocument(documentCode, allConfig);
-      if (result.success) {
-        navigate('/preview', { 
-          state: { 
-            processedDocument: result.processed_document,
-            documentInfo: documentInfo
-          } 
-        });
+      // 批量处理所有选中的文档
+      const results = [];
+      for (const documentCode of documentCodes) {
+        try {
+          const result = await processDocument(documentCode, allConfig);
+          results.push({
+            documentCode,
+            success: result.success,
+            data: result
+          });
+        } catch (err) {
+          results.push({
+            documentCode,
+            success: false,
+            error: err.message
+          });
+        }
+      }
+
+      // 检查处理结果
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.length;
+
+      if (successCount === 0) {
+        setError('所有文档处理失败');
+      } else if (successCount < totalCount) {
+        setError(`部分文档处理失败，成功处理 ${successCount}/${totalCount} 个文档`);
       } else {
-        setError(result.error || '处理失败');
+        // 全部成功，显示成功消息
+        alert(`成功处理 ${successCount} 个文档！`);
+        // 清空选中的文档
+        window.selectedDocuments = [];
+        window.selectedDocumentCodes = [];
+        window.selectedDocumentCode = null;
+        // 返回Dashboard页面
+        navigate('/dashboard');
       }
     } catch (err) {
       console.error('处理失败:', err);
@@ -180,7 +299,18 @@ export default function Config() {
         </div>
       )}
 
-      {documentInfo && (
+      {selectedDocuments.length > 0 && (
+        <div className="config-selected-docs">
+          <strong>选中的文档 ({selectedDocuments.length} 个):</strong>
+          <ul>
+            {selectedDocuments.map((doc, index) => (
+              <li key={index}>{doc.filename} ({doc.file_size_mb}MB)</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {documentInfo && selectedDocuments.length === 0 && (
         <div style={{ 
           background: '#e8f4fd', 
           padding: '12px', 
@@ -248,16 +378,16 @@ export default function Config() {
         onClick={handleSubmit}
         disabled={loading}
       >
-        {loading ? '处理中...' : '提交并预览'}
+        {loading ? '处理中...' : '提交处理'}
       </button>
       
       <button 
         className="config-main-btn" 
-        onClick={handleSelectAllAndPreview}
+        onClick={handleSelectAllAndProcess}
         disabled={loading}
         style={{ marginLeft: '12px' }}
       >
-        {loading ? '处理中...' : '全部勾选并预览'}
+        {loading ? '处理中...' : '全部勾选并处理'}
       </button>
     </div>
   );

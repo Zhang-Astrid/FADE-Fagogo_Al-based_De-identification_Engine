@@ -94,21 +94,55 @@ export async function getDocumentDetail(documentCode) {
 
 // 处理文档
 export async function processDocument(documentCode, config) {
-  const response = await fetch('/api/documents/process/', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      document_code: documentCode,
-      config: config
-    })
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || '处理失败');
+  // 添加调试信息
+  console.log('=== API请求参数 ===');
+  console.log('document_code:', documentCode);
+  console.log('config:', config);
+  console.log('请求体:', JSON.stringify({
+    document_code: documentCode,
+    config: config
+  }, null, 2));
+  console.log('==================');
+
+  const requestBody = {
+    document_code: documentCode,
+    config: config
+  };
+
+  try {
+    const response = await fetch('/api/documents/process/', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log('=== 后端响应 ===');
+    console.log('响应状态:', response.status);
+    console.log('响应头:', Object.fromEntries(response.headers.entries()));
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('后端错误:', errorData);
+      throw new Error(errorData.error || '处理失败');
+    }
+    
+    const responseData = await response.json();
+    console.log('响应数据:', responseData);
+    console.log('==================');
+    
+    return responseData;
+  } catch (error) {
+    console.error('=== 网络请求失败 ===');
+    console.error('错误详情:', error);
+    console.log('==================');
+    
+    // 如果是网络错误或后端未连接，返回错误信息
+    if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
+      throw new Error('无法连接到后端服务器，请检查后端是否启动');
+    }
+    
+    throw error;
   }
-  
-  return await response.json();
 }
 
 // 获取处理日志
@@ -178,4 +212,105 @@ export async function uploadAndRedactPDF(file, config) {
     document: uploadResult.document,
     processed_document: processResult.processed_document
   };
+}
+
+// 获取预览文件URL
+export async function getPreviewFiles(documentCode, processedDocumentId) {
+  const response = await fetch(`/api/documents/preview/${documentCode}/${processedDocumentId}/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '获取预览文件失败');
+  }
+  
+  return await response.json();
+}
+
+// 获取处理后的文档信息（包括识别到的敏感信息）
+export async function getProcessedDocumentInfo(processedDocumentId) {
+  const response = await fetch(`/api/documents/processed-info/${processedDocumentId}/`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '获取处理后文档信息失败');
+  }
+  
+  return await response.json();
+}
+
+// 批量下载处理后的文档
+export async function downloadBatchProcessedDocuments(documentCodes) {
+  const response = await fetch('/api/documents/batch-download/', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ document_codes: documentCodes })
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '批量下载失败');
+  }
+  
+  // 创建下载链接
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `processed_documents_${new Date().toISOString().split('T')[0]}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+// 重新处理文档（用于预览页面修改配置后重新处理）
+export async function reprocessDocument(documentCode, config) {
+  console.log('=== 重新处理文档 ===');
+  console.log('document_code:', documentCode);
+  console.log('config:', config);
+
+  const requestBody = {
+    document_code: documentCode,
+    config: config,
+    reprocess: true // 标识这是重新处理
+  };
+
+  try {
+    const response = await fetch('/api/documents/reprocess/', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log('=== 重新处理响应 ===');
+    console.log('响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('重新处理错误:', errorData);
+      throw new Error(errorData.error || '重新处理失败');
+    }
+    
+    const responseData = await response.json();
+    console.log('重新处理响应数据:', responseData);
+    console.log('==================');
+    
+    return responseData;
+  } catch (error) {
+    console.error('=== 重新处理网络请求失败 ===');
+    console.error('错误详情:', error);
+    console.log('==================');
+    
+    if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
+      throw new Error('无法连接到后端服务器，请检查后端是否启动');
+    }
+    
+    throw error;
+  }
 }
