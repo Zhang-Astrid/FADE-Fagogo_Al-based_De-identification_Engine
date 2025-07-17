@@ -59,8 +59,8 @@ function App() {
                 <div className="main-nav-container">
                   <Link to="/dashboard" className="main-nav-link">首页</Link>
                   <Link to="/config" className="main-nav-link">处理配置</Link>
-                  <Link to="/preview" className="main-nav-link">预览与导出</Link>
-                  <Link to="/result" className="main-nav-link">处理结果</Link>
+                  <Link to="/preview" className="main-nav-link">预览导出</Link>
+                  {/* <Link to="/result" className="main-nav-link">处理结果</Link> */}
                   <Link to="/settings" className="main-nav-link">系统设置</Link>
                   <span style={{float: 'right', marginLeft: '2em'}}>欢迎，{user?.username} <button onClick={handleLogout}>退出</button></span>
                 </div>
@@ -70,8 +70,8 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/config" element={<Config />} />
                   <Route path="/settings" element={<Settings />} />
-                  <Route path="/results" element={<Results />} />
-                  <Route path="/result" element={<Result />} />
+                  {/* <Route path="/results" element={<Results />} /> */}
+                  {/* <Route path="/result" element={<Result />} /> */}
                   <Route path="/preview" element={<PDFPreview />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

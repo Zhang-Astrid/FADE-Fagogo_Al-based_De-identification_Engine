@@ -12,4 +12,8 @@ urlpatterns = [
     path('process/', views.process_document, name='process_document'),
     path('logs/<int:processed_document_id>/', views.get_processing_logs, name='get_processing_logs'),
     path('download/<int:processed_document_id>/', views.download_processed_document, name='download_processed_document'),
+    path('processed_list/', views.get_user_processed_documents, name='get_user_processed_documents'),
+    path('preview/<str:document_code>/<int:processed_id>/', views.preview_document, name='preview_document'),
+    path('processed-info/<int:processed_id>/', views.processed_document_info, name='processed_document_info'),
+    path('export_all/', views.export_all_processed_documents, name='export_all_processed_documents'),
 ] 

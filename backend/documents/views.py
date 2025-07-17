@@ -228,6 +228,12 @@ def process_document(request):
         # 处理完成
         end_time = 1
         if result:
+            # 保存处理后PDF到processed_file字段
+            processed_pdf_path = os.path.join(document.get_storage_path(), 'outputs', config_hash, 'result.pdf')
+            if os.path.exists(processed_pdf_path):
+                from django.core.files import File
+                with open(processed_pdf_path, 'rb') as f:
+                    processed_doc.processed_file.save(f'processed_{config_hash}.pdf', File(f), save=False)
             processed_doc.status = 'completed'
             processed_doc.total_fields = len(config)
             processed_doc.processed_fields = len(config)
@@ -359,3 +365,129 @@ def delete_document(request, document_code):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_processed_documents(request):
+    """
+    获取当前用户所有处理过的文件（ProcessedDocument）
+    """
+    try:
+        processed_docs = ProcessedDocument.objects.filter(document__user=request.user).order_by('-process_time')
+        print(f"[DEBUG] 查询到{processed_docs.count()}条处理记录")
+        for doc in processed_docs[:3]:
+            print(f"[DEBUG] 记录: id={doc.id}, 文件={doc.document.filename}, 配置={doc.config_data}, 状态={doc.status}, 时间={doc.process_time}")
+        serializer = ProcessedDocumentSerializer(processed_docs, many=True, context={'request': request})
+        return Response({
+            'success': True,
+            'processed_documents': serializer.data
+        })
+    except Exception as e:
+        print(f"[ERROR] 获取处理记录失败: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def preview_document(request, document_code, processed_id):
+    """
+    获取原始PDF和处理后PDF的URL
+    """
+    from .models import Document, ProcessedDocument
+    try:
+        document = Document.objects.get(document_code=document_code, user=request.user)
+        processed = ProcessedDocument.objects.get(id=processed_id, document=document)
+        original_url = request.build_absolute_uri(document.original_file.url) if document.original_file else None
+        processed_url = request.build_absolute_uri(processed.processed_file.url) if processed.processed_file else None
+        # 可选：返回总页数
+        page_count = document.page_count
+        return Response({
+            'success': True,
+            'original_url': original_url,
+            'processed_url': processed_url,
+            'total_pages': page_count
+        })
+    except Document.DoesNotExist:
+        return Response({'success': False, 'error': '文档不存在'}, status=404)
+    except ProcessedDocument.DoesNotExist:
+        return Response({'success': False, 'error': '处理记录不存在'}, status=404)
+    except Exception as e:
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def processed_document_info(request, processed_id):
+    """
+    获取处理后文档的详细信息，包括配置、状态、识别到的敏感字段等
+    """
+    from .models import ProcessedDocument, ProcessingLog
+    try:
+        processed = ProcessedDocument.objects.get(id=processed_id, document__user=request.user)
+        # 处理配置、状态等
+        document = processed.document
+        doc_info = {
+            'document_code': document.document_code,
+            'filename': document.filename,
+            'file_size': document.file_size,
+            'file_size_mb': round(document.file_size / (1024*1024), 2),
+            'page_count': document.page_count,
+            'upload_time': document.upload_time,
+        }
+        # 敏感字段（如有）
+        logs = ProcessingLog.objects.filter(processed_document=processed)
+        sensitive_fields = [
+            {
+                'type': log.field_name,
+                'value': '',  # 可根据需要补充原文内容
+                'method': log.processing_method,
+                'page': None, # 如有页码可补充
+                'status': log.status,
+                'confidence': log.confidence,
+            }
+            for log in logs
+        ]
+        return Response({
+            'success': True,
+            'document': doc_info,
+            'config': processed.config_data,
+            'status': processed.status,
+            'process_time': processed.process_time,
+            'sensitive_fields': sensitive_fields
+        })
+    except ProcessedDocument.DoesNotExist:
+        return Response({'success': False, 'error': '处理记录不存在'}, status=404)
+    except Exception as e:
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from django.http import StreamingHttpResponse
+import zipfile
+import io
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_all_processed_documents(request):
+    """导出当前用户所有已完成的处理文档为zip"""
+    processed_docs = ProcessedDocument.objects.filter(document__user=request.user, status='completed').select_related('document')
+    if not processed_docs.exists():
+        return Response({'success': False, 'error': '暂无已完成的处理文档'}, status=404)
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for pd in processed_docs:
+            if pd.processed_file and pd.processed_file.name:
+                file_path = pd.processed_file.path
+                if not os.path.exists(file_path):
+                    continue
+                # 文件名格式: 原文件名-配置hash.pdf
+                base_name = os.path.splitext(pd.document.filename)[0]
+                zip_name = f"{base_name}-{pd.config_hash[:8]}.pdf"
+                with open(file_path, 'rb') as f:
+                    zip_file.writestr(zip_name, f.read())
+    zip_buffer.seek(0)
+    response = StreamingHttpResponse(zip_buffer, content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="all_processed_documents.zip"'
+    return response

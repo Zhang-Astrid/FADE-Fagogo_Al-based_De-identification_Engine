@@ -314,3 +314,40 @@ export async function reprocessDocument(documentCode, config) {
     throw error;
   }
 }
+
+// 获取用户所有处理过的文件
+export async function getUserProcessedDocuments() {
+  const response = await fetch('/api/documents/processed_list/', {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '获取处理结果列表失败');
+  }
+  return await response.json();
+}
+
+// 导出所有处理过的文档为ZIP
+export async function exportAllProcessedDocuments() {
+  const response = await fetch('/api/documents/export_all/', {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '导出失败');
+  }
+  
+  // 创建下载链接
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `all_processed_documents_${new Date().toISOString().split('T')[0]}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}

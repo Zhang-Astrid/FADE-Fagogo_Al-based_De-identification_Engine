@@ -35,25 +35,25 @@ export default function Settings() {
           <label><input type="radio" name="mode" value="gpu" checked={mode === "gpu"} onChange={() => setMode("gpu")} /> GPU加速</label>
         </div>
       </div>
-      <div className="settings-card">
-        <div className="settings-section-title">正则表达式管理</div>
-        <ul className="settings-regex-list">
-          {regexList.map((r, i) => (
-            <li key={i} className="settings-regex-item">
-              <span>{r}</span>
-              <button className="settings-regex-del" onClick={()=>removeRegex(i)}>删除</button>
-            </li>
-          ))}
-        </ul>
-        <div className="settings-regex-add-row">
-          <input className="settings-regex-input" value={newRegex} onChange={e=>setNewRegex(e.target.value)} placeholder="添加正则表达式" />
-          <button className="settings-btn" onClick={addRegex}>添加</button>
-        </div>
-        <div className="settings-regex-batch-row">
-          <button className="settings-btn">批量导入</button>
-          <button className="settings-btn">批量导出</button>
-        </div>
-      </div>
+      {/*<div className="settings-card">*/}
+      {/*  <div className="settings-section-title">正则表达式管理</div>*/}
+      {/*  <ul className="settings-regex-list">*/}
+      {/*    {regexList.map((r, i) => (*/}
+      {/*      <li key={i} className="settings-regex-item">*/}
+      {/*        <span>{r}</span>*/}
+      {/*        <button className="settings-regex-del" onClick={()=>removeRegex(i)}>删除</button>*/}
+      {/*      </li>*/}
+      {/*    ))}*/}
+      {/*  </ul>*/}
+      {/*  <div className="settings-regex-add-row">*/}
+      {/*    <input className="settings-regex-input" value={newRegex} onChange={e=>setNewRegex(e.target.value)} placeholder="添加正则表达式" />*/}
+      {/*    <button className="settings-btn" onClick={addRegex}>添加</button>*/}
+      {/*  </div>*/}
+      {/*  <div className="settings-regex-batch-row">*/}
+      {/*    <button className="settings-btn">批量导入</button>*/}
+      {/*    <button className="settings-btn">批量导出</button>*/}
+      {/*  </div>*/}
+      {/*</div>*/}
       <div className="settings-card">
         <div className="settings-section-title">日志导出选项</div>
         <label><input type="checkbox" checked={logOptions.raw} onChange={()=>handleLogOption("raw")} /> 包含原始文本</label>

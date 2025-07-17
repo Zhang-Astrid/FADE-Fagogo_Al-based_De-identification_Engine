@@ -1,61 +1,77 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   getPreviewFiles, 
   getProcessedDocumentInfo, 
   downloadProcessedDocument,
-  reprocessDocument 
+  getUserProcessedDocuments, // 新增
+  deleteDocument, // 新增
+  exportAllProcessedDocuments // 新增
 } from "../../api/redact";
 
 export default function PDFPreview() {
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // 初始不加载
   const [error, setError] = useState('');
   const [previewData, setPreviewData] = useState(null);
-  const [sensitiveFields, setSensitiveFields] = useState([]);
   const [documentInfo, setDocumentInfo] = useState(null);
-  const [processing, setProcessing] = useState(false);
+  const [processedList, setProcessedList] = useState([]);
+  const [selectedProcessed, setSelectedProcessed] = useState(null);
   
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // 从URL参数或location.state获取文档信息
+  // 页面加载时获取所有处理记录
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const documentCode = params.get('document_code') || location.state?.documentCode;
-    const processedDocumentId = params.get('processed_id') || location.state?.processedDocumentId;
-    
-    if (!documentCode || !processedDocumentId) {
-      setError('缺少必要的文档信息');
-      setLoading(false);
-      return;
+    loadProcessedList();
+  }, []);
+
+  // 处理记录加载后，自动选中最新一条
+  useEffect(() => {
+    if (processedList.length > 0) {
+      setSelectedProcessed(processedList[0]);
+      loadPreviewData(processedList[0].document.document_code, processedList[0].id);
+    } else {
+      setSelectedProcessed(null);
+      setPreviewData(null);
+      setDocumentInfo(null);
     }
+  }, [processedList]);
 
-    loadPreviewData(documentCode, processedDocumentId);
-  }, [location]);
+  // 加载所有处理记录
+  const loadProcessedList = async () => {
+    try {
+      const result = await getUserProcessedDocuments();
+      if (result.success) {
+        setProcessedList(result.processed_documents);
+        console.log('[前端DEBUG] 已获取处理结果列表:', result.processed_documents);
+      } else {
+        console.warn('[前端DEBUG] 获取处理结果列表失败:', result);
+      }
+    } catch (err) {
+      console.error('获取处理结果列表失败:', err);
+    }
+  };
 
+  // 切换选中处理记录
+  const handleSelectProcessed = (item) => {
+    setSelectedProcessed(item);
+    loadPreviewData(item.document.document_code, item.id);
+  };
+
+  // 加载预览数据
   const loadPreviewData = async (documentCode, processedDocumentId) => {
     try {
       setLoading(true);
       setError('');
-
-      // 并行获取预览文件和文档信息
       const [previewResult, infoResult] = await Promise.all([
         getPreviewFiles(documentCode, processedDocumentId),
         getProcessedDocumentInfo(processedDocumentId)
       ]);
-
       if (previewResult.success) {
         setPreviewData(previewResult);
-        setTotalPages(previewResult.total_pages || 1);
       }
-
       if (infoResult.success) {
         setDocumentInfo(infoResult.document);
-        setSensitiveFields(infoResult.sensitive_fields || []);
       }
-
     } catch (err) {
       console.error('加载预览数据失败:', err);
       setError(err.message || '加载预览数据失败');
@@ -64,221 +80,196 @@ export default function PDFPreview() {
     }
   };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
+
+
+
+
+  // 新增删除处理记录的函数
+  const handleDeleteProcessed = async (item) => {
+    if (!window.confirm(`确定要删除文档“${item.document.filename}”及其所有处理记录吗？`)) return;
+    try {
+      await deleteDocument(item.document.document_code);
+      await loadProcessedList();
+    } catch (err) {
+      alert('删除失败：' + (err.message || err));
     }
   };
 
-  const handleFieldEdit = () => {
-    // 跳转到配置页面，传递当前配置信息
-    const currentConfig = sensitiveFields.reduce((acc, field) => {
-      acc[field.type] = field.method;
-      return acc;
-    }, {});
-
-    navigate('/config', {
-      state: {
-        documentCode: documentInfo?.document_code,
-        currentConfig,
-        fromPreview: true,
-        processedDocumentId: location.state?.processedDocumentId || 
-                           new URLSearchParams(location.search).get('processed_id')
-      }
-    });
-  };
-
-  const handleReprocess = async () => {
-    if (!documentInfo?.document_code) {
-      setError('缺少文档信息');
+  // 导出所有处理过的文档
+  const handleExportAll = async () => {
+    if (processedList.length === 0) {
+      alert('暂无处理记录可导出');
       return;
     }
-
-    setProcessing(true);
-    setError('');
-
     try {
-      // 构造当前配置
-      const config = sensitiveFields.reduce((acc, field) => {
-        acc[field.type] = field.method;
-        return acc;
-      }, {});
-
-      const result = await reprocessDocument(documentInfo.document_code, config);
-      
-      if (result.success) {
-        // 重新加载预览数据
-        await loadPreviewData(documentInfo.document_code, result.processed_document.id);
-        alert('文档重新处理完成！');
-      }
+      await exportAllProcessedDocuments();
     } catch (err) {
-      console.error('重新处理失败:', err);
-      setError(err.message || '重新处理失败');
-    } finally {
-      setProcessing(false);
+      console.error('导出失败:', err);
+      alert('导出失败：' + (err.message || err));
     }
   };
-
-  const handleDownload = async () => {
-    if (!location.state?.processedDocumentId && !new URLSearchParams(location.search).get('processed_id')) {
-      setError('缺少处理后文档ID');
-      return;
-    }
-
-    const processedDocumentId = location.state?.processedDocumentId || 
-                               new URLSearchParams(location.search).get('processed_id');
-
-    try {
-      await downloadProcessedDocument(processedDocumentId);
-    } catch (err) {
-      console.error('下载失败:', err);
-      setError(err.message || '下载失败');
-    }
-  };
-
-  const handleConfirmAndDownload = async () => {
-    await handleDownload();
-    // 下载完成后返回Dashboard
-    navigate('/dashboard');
-  };
-
-  if (loading) {
-    return (
-      <div className="preview-root">
-        <div className="preview-loading">
-          <div className="loading-spinner"></div>
-          <p>正在加载预览数据...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="preview-root">
-        <div className="preview-error">
-          <h2>加载失败</h2>
-          <p>{error}</p>
-          <button onClick={() => navigate('/dashboard')}>返回Dashboard</button>
-        </div>
-      </div>
-    );
-  }
-
-  // 过滤当前页面的敏感信息
-  const currentPageFields = sensitiveFields.filter(field => field.page === page);
 
   return (
     <div className="preview-root">
       <h1 className="preview-title">文件预览与敏感信息校正</h1>
-      
-      {documentInfo && (
-        <div className="preview-document-info">
-          <strong>文档:</strong> {documentInfo.filename} ({documentInfo.file_size_mb}MB)
+      {/* 历史处理结果表格始终显示 */}
+      <div className="preview-processed-list">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <h2 style={{margin:0}}>历史处理结果</h2>
+          <button onClick={handleExportAll} style={{marginLeft:'auto'}}>全部导出</button>
         </div>
-      )}
-
-      <div className="preview-main">
-        {/* 左侧PDF预览区 */}
-        <div className="preview-pdf-col">
-          <div className="preview-pdf-area-row">
-            <div className="preview-pdf-area">
-              {previewData?.original_url ? (
-                <iframe 
-                  src={previewData.original_url} 
-                  title="原文件预览"
-                  className="pdf-iframe"
-                />
-              ) : (
-                <div className="preview-pdf-placeholder">
-                  <span className="pdf-label">原图</span> PDF第{page}页预览
-                </div>
-              )}
-            </div>
-            <div className="preview-pdf-area">
-              {previewData?.processed_url ? (
-                <iframe 
-                  src={previewData.processed_url} 
-                  title="处理后文件预览"
-                  className="pdf-iframe"
-                />
-              ) : (
-                <div className="preview-pdf-placeholder">
-                  <span className="pdf-label redact">脱敏图</span> PDF第{page}页预览
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="preview-page-row">
-            <button 
-              disabled={page <= 1} 
-              onClick={() => handlePageChange(page - 1)}
-            >
-              &lt;
-            </button>
-            <span>第 {page} / {totalPages} 页</span>
-            <button 
-              disabled={page >= totalPages} 
-              onClick={() => handlePageChange(page + 1)}
-            >
-              &gt;
-            </button>
-          </div>
-        </div>
-
-        {/* 右侧识别信息列表 */}
-        <div className="preview-info-col">
-          <div className="preview-info-title">识别敏感信息</div>
-          {currentPageFields.length > 0 ? (
-            <ul className="preview-info-list">
-              {currentPageFields.map((field, index) => (
-                <li key={index} className="preview-info-item">
-                  <span className="type">{field.type}</span>
-                  <span className="value">{field.value}</span>
-                  <span className="method">{field.method}</span>
+        <table className="processed-table">
+          <thead>
+            <tr>
+              <th>文档名</th>
+              <th>处理时间</th>
+              <th>配置摘要</th>
+              <th>状态</th>
+              <th>操作</th>
+              <th>下载</th>
+              <th>删除</th>
+            </tr>
+          </thead>
+          <tbody>
+            {processedList.map(item => (
+              <tr key={item.id} className={selectedProcessed && selectedProcessed.id === item.id ? 'selected' : ''}>
+                <td>{item.document.filename}</td>
+                <td>{item.process_time ? new Date(item.process_time).toLocaleString() : '-'}</td>
+                <td>{Object.entries(item.config_data)
+                  .filter(([, v]) => v !== 'empty') // 过滤掉empty字段
+                  .map(([key, value]) => {
+                    // 字段名转换为中文
+                    const fieldNameMap = {
+                      'name': '姓名',
+                      'address': '地址', 
+                      'company': '公司名',
+                      'email': '邮箱',
+                      'phone': '电话',
+                      'id_card': '身份证',
+                      'bank_card': '银行卡',
+                      'account': '账号'
+                    };
+                    // 处理方式转换为中文
+                    const methodMap = {
+                      'mosaic': '马赛克',
+                      'blur': '模糊',
+                      'black': '黑色遮盖',
+                      'empty': '清空'
+                    };
+                    const fieldName = fieldNameMap[key] || key;
+                    const methodName = methodMap[value] || value;
+                    return `${fieldName}:${methodName}`;
+                  }).join(', ')}</td>
+                <td>{item.status}</td>
+                <td>
                   <button 
-                    className="edit-btn"
-                    onClick={() => handleFieldEdit(index)}
+                    onClick={() => handleSelectProcessed(item)}
+                    disabled={item.status !== "completed"}
                   >
-                    调整
+                    预览
                   </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="preview-no-fields">
-              <p>当前页面未识别到敏感信息</p>
-            </div>
-          )}
-          
-          {sensitiveFields.length > 0 && (
-            <div className="preview-actions">
-              <button 
-                className="preview-action-btn"
-                onClick={handleReprocess}
-                disabled={processing}
-              >
-                {processing ? '重新处理中...' : '重新处理'}
-              </button>
-            </div>
-          )}
-        </div>
+                </td>
+                <td>
+                  <button 
+                    onClick={() => downloadProcessedDocument(item.id)}
+                    disabled={item.status !== "completed"}
+                  >
+                    下载
+                  </button>
+                </td>
+                <td>
+                  <button 
+                    onClick={() => handleDeleteProcessed(item)}
+                  >
+                    删除
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {processedList.length === 0 && (
+              <tr><td colSpan={7} style={{textAlign:'center'}}>暂无处理记录</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <div className="preview-bottom-row">
-        <button 
-          className="preview-secondary-btn"
-          onClick={() => navigate('/dashboard')}
-        >
-          返回Dashboard
-        </button>
-        <button 
-          className="preview-main-btn"
-          onClick={handleConfirmAndDownload}
-        >
-          确认并下载脱敏文档
-        </button>
-      </div>
+      {/* 预览区逻辑：只依赖selectedProcessed */}
+      {selectedProcessed && !loading && !error && (
+        <>
+          <div className="preview-document-info">
+            <strong>文档:</strong> {documentInfo?.filename} ({documentInfo?.file_size_mb}MB)
+          </div>
+          <div className="preview-main">
+            {/* 左侧PDF预览区 */}
+            <div className="preview-pdf-col">
+              <div className="preview-pdf-area-row">
+                <div className="preview-pdf-area">
+                  {previewData?.original_url ? (
+                    <iframe 
+                      src={previewData.original_url} 
+                      title="原文件预览"
+                      className="pdf-iframe"
+                    />
+                  ) : (
+                    <div className="preview-pdf-placeholder">
+                      <span className="pdf-label">原图</span> PDF预览
+                    </div>
+                  )}
+                </div>
+                <div className="preview-pdf-area">
+                  {previewData?.processed_url ? (
+                    <iframe 
+                      src={previewData.processed_url} 
+                      title="处理后文件预览"
+                      className="pdf-iframe"
+                    />
+                  ) : (
+                    <div className="preview-pdf-placeholder">
+                      <span className="pdf-label redact">脱敏图</span> PDF预览
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* <div className="preview-page-row">
+                <button 
+                  disabled={page <= 1} 
+                  onClick={() => setPage(page - 1)}
+                >
+                  &lt;
+                </button>
+                <span>第 {page} / {totalPages} 页</span>
+                <button 
+                  disabled={page >= totalPages} 
+                  onClick={() => setPage(page + 1)}
+                >
+                  &gt;
+                </button>
+              </div> */}
+            </div>
+          </div>
+          {/*<div className="preview-bottom-row">*/}
+          {/*  <button */}
+          {/*    className="preview-secondary-btn"*/}
+          {/*    onClick={() => navigate('/dashboard')}*/}
+          {/*  >*/}
+          {/*    返回Dashboard*/}
+          {/*  </button>*/}
+          {/*  <button */}
+          {/*    className="preview-main-btn"*/}
+          {/*    onClick={handleConfirmAndDownload}*/}
+          {/*  >*/}
+          {/*    确认并下载脱敏文档*/}
+          {/*  </button>*/}
+          {/*</div>*/}
+        </>
+      )}
+      {/* 没有选中处理记录时的提示 */}
+      {!selectedProcessed && (
+        <div style={{textAlign:'center', margin:'2rem', color:'#888'}}>请选择或新建处理记录</div>
+      )}
+      {/* 加载/错误提示 */}
+      {loading && <div className="preview-loading"><div className="loading-spinner"></div><p>正在加载预览数据...</p></div>}
+      {error && <div className="preview-error"><h2>加载失败</h2><p>{error}</p><button onClick={() => navigate('/dashboard')}>返回Dashboard</button></div>}
     </div>
   );
 } 
