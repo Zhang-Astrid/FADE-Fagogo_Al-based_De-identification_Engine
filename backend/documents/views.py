@@ -16,6 +16,11 @@ from .serializers import (
     DocumentUploadSerializer, DocumentConfigSerializer
 )
 import fitz  # PyMuPDF
+from .process import process
+import asyncio
+from time import time
+import logging
+logger = logging.getLogger(__name__)
 
 def calculate_file_hash(file):
     """计算文件的MD5哈希值"""
@@ -210,39 +215,44 @@ def process_document(request):
         )
         
         # TODO: 这里应该启动异步任务进行实际处理
-        # 目前先模拟处理过程
+        start_time = 0
+        # task = asyncio.create_task(process(document.get_storage_path(), config, config_hash))
+        logger.info(f"文件地址：{document.get_storage_path()}")
+        result = process(document.get_storage_path(), config, config_hash)
+        # 处理过程
         processed_doc.status = 'processing'
         processed_doc.save()
         
-        # 模拟处理完成
-        processed_doc.status = 'completed'
-        processed_doc.total_fields = len(config)
-        processed_doc.processed_fields = len(config)
-        processed_doc.processing_time = 2.5  # 模拟处理时间
-        processed_doc.save()
-        
-        # 创建处理日志
-        for field_name, method in config.items():
-            ProcessingLog.objects.create(
-                processed_document=processed_doc,
-                field_name=field_name,
-                field_type='custom',
-                processing_method=method,
-                status='success',
-                confidence=0.95,
-                processing_time=0.5
+        # 处理完成
+        end_time = 1
+        if result:
+            processed_doc.status = 'completed'
+            processed_doc.total_fields = len(config)
+            processed_doc.processed_fields = len(config)
+            processed_doc.processing_time = end_time - start_time
+            processed_doc.save()
+            
+            # 创建处理日志
+            for field_name, method in config.items():
+                ProcessingLog.objects.create(
+                    processed_document=processed_doc,
+                    field_name=field_name,
+                    field_type='custom',
+                    processing_method=method,
+                    status='success',
+                    confidence=0.95,
+                    processing_time=0.5
+                )
+            
+            processed_serializer = ProcessedDocumentSerializer(
+                processed_doc, context={'request': request}
             )
-        
-        processed_serializer = ProcessedDocumentSerializer(
-            processed_doc, context={'request': request}
-        )
-        
-        return Response({
-            'success': True,
-            'message': '文档处理完成',
-            'processed_document': processed_serializer.data
-        })
-        
+            
+            return Response({
+                'success': True,
+                'message': '文档处理完成',
+                'processed_document': processed_serializer.data
+            })
     except Exception as e:
         return Response({
             'success': False,
