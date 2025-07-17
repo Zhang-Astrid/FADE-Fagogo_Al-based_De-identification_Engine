@@ -46,9 +46,11 @@ class Document(models.Model):
         return os.path.join('media', self.user.username, self.document_code)
 
 class ProcessedDocument(models.Model):
-    """处理后的文档模型 - 存储不同配置处理后的文档"""
+    """
+    处理后的文档模型 - 存储不同配置处理后的文档
+    """
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='processed_versions')
-    config_hash = models.CharField(max_length=64, unique=True)  # 配置的哈希值
+    config_hash = models.CharField(max_length=64)  # 配置的哈希值
     config_data = models.JSONField()  # 处理配置(字段选择、模糊方式等)
     processed_file = models.FileField(upload_to=processed_document_path, blank=True, null=True)
     process_time = models.DateTimeField(auto_now_add=True)
@@ -67,6 +69,7 @@ class ProcessedDocument(models.Model):
     
     class Meta:
         ordering = ['-process_time']
+        unique_together = ('document', 'config_hash')
     
     def __str__(self):
         return f"{self.document.filename} - {self.config_hash}"

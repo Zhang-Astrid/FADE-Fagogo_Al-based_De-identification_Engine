@@ -78,16 +78,14 @@ class DocumentConfigSerializer(serializers.Serializer):
     config = serializers.JSONField()
     
     def validate_config(self, value):
-        """验证配置格式"""
+        """验证配置格式，处理方式严格参考img.py"""
         if not isinstance(value, dict):
             raise serializers.ValidationError("配置必须是JSON对象")
-        
-        # 验证配置中的字段和方式
+        # 允许的处理方式与img.py保持一致
+        allowed_methods = ['mosaic', 'blur', 'black', 'empty']
         for field_name, method in value.items():
             if not isinstance(field_name, str) or not isinstance(method, str):
                 raise serializers.ValidationError("配置格式错误")
-            
-            if method not in ['blur', 'cover', 'replace', 'smear']:
-                raise serializers.ValidationError(f"不支持的处理方式: {method}")
-        
+            if method not in allowed_methods:
+                raise serializers.ValidationError(f"不支持的处理方式: {method} (仅支持: {allowed_methods})")
         return value 

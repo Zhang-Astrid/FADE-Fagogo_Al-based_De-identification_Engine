@@ -14,10 +14,9 @@ const defaultFields = [
 ];
 
 const methodOptions = [
-  { value: "blur", label: "模糊(高斯模糊)" },
-  { value: "cover", label: "遮挡(黑条)" },
-  { value: "replace", label: "文本替换(如：***)" },
-  { value: "smear", label: "图像涂抹" },
+  { value: "mosaic", label: "马赛克" },
+  { value: "blur", label: "高斯模糊" },
+  { value: "black", label: "黑条遮挡" },
 ];
 
 export default function Config() {
@@ -124,16 +123,22 @@ export default function Config() {
       return;
     }
 
-    // 构造config参数：只传递被勾选的字段及其处理方式
-    const config = Object.entries(selected)
-      .filter(([, v]) => v.checked)
-      .reduce((acc, [key, v]) => {
-        acc[key] = v.method || 'blur';
-        return acc;
-      }, {});
+    // 构造config参数：所有字段都要传递，未勾选的为 empty，顺序与 fields 配置一致
+    const config = {};
+    fields.forEach(group => {
+      group.fields.forEach(field => {
+        // 按 fields 顺序插入 key，保证顺序一致
+        if (selected[field.key]?.checked) {
+          config[field.key] = selected[field.key].method || 'mosaic';
+        } else {
+          config[field.key] = 'empty';
+        }
+      });
+    });
 
     if (Object.keys(config).length === 0) {
       setError('请至少选择一个字段进行处理');
+      alert('请至少选择一个字段进行处理');
       return;
     }
 
@@ -230,9 +235,14 @@ export default function Config() {
     const allConfig = {};
     fields.forEach(group => {
       group.fields.forEach(field => {
-        allConfig[field.key] = 'blur'; // 默认使用模糊处理
+        allConfig[field.key] = 'black'; // 默认使用涂黑处理
       });
     });
+    if (Object.keys(allConfig).length === 0) {
+      setError('没有可处理的字段');
+      alert('没有可处理的字段');
+      return;
+    }
 
     setLoading(true);
     setError('');

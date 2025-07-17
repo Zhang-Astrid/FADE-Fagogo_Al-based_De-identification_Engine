@@ -176,6 +176,7 @@ def process_document(request):
         document_code = serializer.validated_data['document_code']
         config = serializer.validated_data['config']
         
+        print(f"[DEBUG] 接收到的 config 参数: {config}")
         # 获取文档
         try:
             document = Document.objects.get(document_code=document_code, user=request.user)
@@ -188,6 +189,7 @@ def process_document(request):
         # 生成配置哈希
         config_str = json.dumps(config, sort_keys=True)
         config_hash = hashlib.md5(config_str.encode()).hexdigest()
+        print(f"[DEBUG] 传递给 process.py 的参数: 路径={document.get_storage_path()}, config={config}, config_hash={config_hash}")
         
         # 检查是否已有相同配置的处理结果
         existing_processed = ProcessedDocument.objects.filter(
