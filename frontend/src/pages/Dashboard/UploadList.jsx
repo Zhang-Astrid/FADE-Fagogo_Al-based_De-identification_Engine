@@ -89,8 +89,7 @@ export default function UploadList({ userDocuments }) {
                   type="checkbox"
                   checked={selectedDocuments.length === userDocuments.length}
                   onChange={handleSelectAll}
-                />
-                全选
+                />全选
               </label>
               {selectedDocuments.length > 0 && (
                 <div className="upload-list-btn-group">
