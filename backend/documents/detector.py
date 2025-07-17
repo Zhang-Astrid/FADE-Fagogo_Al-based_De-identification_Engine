@@ -100,7 +100,9 @@ class Detector:
             # print(f"Phrase: {phrase}, Label: {entity}, Confidence: {total_score/count}")
             sensitive_info[entity].add(phrase)
 
-        sensitive_info["sens_number"] = re.findall(r'(?<!a-zA-Z\d_)(?=[\d]{5,})(?![a-zA-Z-_]+$)(?=.*\d)[a-zA-Z\d_-]+(?!a-zA-Z\d_)', text)  # Find long numbers (e.g., phone numbers, id numbers, account)
+        sensitive_info["sens_number"] = re.findall(r'\b[a-zA-Z0-9-]+\b', text)  # Find long numbers (e.g., phone numbers, id numbers, account)
+        filtered_numbers = [text for text in sensitive_info["sens_number"] if re.search(r'\d', text) and len(text) > 5]
+        sensitive_info["sens_number"] = filtered_numbers
         sensitive_info["email"] = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', text)  # Find email addresses
 
         return sensitive_info
