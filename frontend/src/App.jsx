@@ -62,7 +62,7 @@ function App() {
                   <Link to="/preview" className="main-nav-link">预览导出</Link>
                   {/* <Link to="/result" className="main-nav-link">处理结果</Link> */}
                   <Link to="/settings" className="main-nav-link">系统设置</Link>
-                  <span style={{float: 'right', marginLeft: '2em'}}>欢迎，{user?.username} <button onClick={handleLogout}>退出</button></span>
+                  <span className="user-welcome">欢迎，{user?.username} <button onClick={handleLogout}>退出</button></span>
                 </div>
               </nav>
               <div className="main-content-container">

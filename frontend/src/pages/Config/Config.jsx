@@ -298,13 +298,7 @@ export default function Config() {
       <h1 className="config-title">脱敏配置</h1>
       
       {error && (
-        <div style={{ 
-          background: '#fee', 
-          color: '#c33', 
-          padding: '12px', 
-          borderRadius: '6px', 
-          marginBottom: '16px' 
-        }}>
+        <div className="config-error">
           {error}
         </div>
       )}
@@ -321,12 +315,7 @@ export default function Config() {
       )}
 
       {documentInfo && selectedDocuments.length === 0 && (
-        <div style={{ 
-          background: '#e8f4fd', 
-          padding: '12px', 
-          borderRadius: '6px', 
-          marginBottom: '16px' 
-        }}>
+        <div className="config-document-info">
           <strong>当前文档:</strong> {documentInfo.filename} ({documentInfo.file_size_mb}MB)
         </div>
       )}
@@ -392,10 +381,9 @@ export default function Config() {
       </button>
       
       <button 
-        className="config-main-btn" 
+        className="config-main-btn config-secondary-btn" 
         onClick={handleSelectAllAndProcess}
         disabled={loading}
-        style={{ marginLeft: '12px' }}
       >
         {loading ? '处理中...' : '全部勾选并处理'}
       </button>

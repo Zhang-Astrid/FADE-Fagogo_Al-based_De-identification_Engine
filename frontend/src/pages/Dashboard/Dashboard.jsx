@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { uploadPDF, getUserDocuments } from "../../api/redact";
+import { uploadPDF, getUserDocuments, getDashboardStats } from "../../api/redact";
 import UploadList from "./UploadList";
 
 export default function Dashboard() {
   // 状态管理
-  const [modelStatus] = useState({ name: "轻量模型 v1.2", status: "正常运行", mode: "CPU模式" });
-  const [todayStats] = useState({ total: 18, successRate: 97 });
+  const [modelStatus, setModelStatus] = useState({ name: "轻量模型 v1.2", status: "正常运行", mode: "CPU模式" });
+  const [todayStats, setTodayStats] = useState({ total: 0, successRate: 0 });
+  const [recentRecords, setRecentRecords] = useState([]);
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploadStatus, setUploadStatus] = useState([]);
   const [userDocuments, setUserDocuments] = useState([]);
@@ -16,9 +17,10 @@ export default function Dashboard() {
   const [isDragOver, setIsDragOver] = useState(false);
   const dropzoneRef = useRef(null);
 
-  // 获取用户文档列表
+  // 获取用户文档列表和仪表板统计数据
   useEffect(() => {
     loadUserDocuments();
+    loadDashboardStats();
   }, []);
 
   const loadUserDocuments = async () => {
@@ -30,6 +32,32 @@ export default function Dashboard() {
     } catch (err) {
       console.error('加载文档列表失败:', err);
       setError('加载文档列表失败');
+    }
+  };
+
+  const loadDashboardStats = async () => {
+    try {
+      const result = await getDashboardStats();
+      console.log('🔍 Dashboard API响应:', result);
+      
+      if (result.success) {
+        console.log('📊 原始stats数据:', result.stats);
+        
+        // 正确映射后端返回的字段名
+        const mappedStats = {
+          total: result.stats.total,
+          successRate: result.stats.success_rate  // 映射下划线格式到驼峰格式
+        };
+        
+        console.log('📊 映射后的stats数据:', mappedStats);
+        
+        setTodayStats(mappedStats);
+        setModelStatus(result.model_status);
+        setRecentRecords(result.recent_records);
+      }
+    } catch (err) {
+      console.error('加载仪表板统计数据失败:', err);
+      // 不显示错误，使用默认值
     }
   };
 
@@ -77,8 +105,9 @@ export default function Dashboard() {
     setUploadStatus(statusArr);
     setLoading(false);
     
-    // 重新加载文档列表
+    // 重新加载文档列表和统计数据
     await loadUserDocuments();
+    await loadDashboardStats();
   }
 
   // 上传文件处理
@@ -117,13 +146,6 @@ export default function Dashboard() {
       await processFiles(files);
     }
   };
-
-  // 获取最近处理的文档
-  const recentRecords = userDocuments.slice(0, 5).map(doc => ({
-    name: doc.filename,
-    time: new Date(doc.upload_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    status: doc.status === 'processed' ? 'success' : doc.status === 'failed' ? 'fail' : 'pending'
-  }));
 
   const getUploadStatusClass = (status) => {
     switch (status) {
@@ -169,8 +191,11 @@ export default function Dashboard() {
               {recentRecords.length > 0 ? (
                 recentRecords.map((r, i) => (
                   <li key={i} className={`dashboard-recent-item ${r.status}`}>
-                    <span>{r.name}</span>
-                    <span>{r.time}</span>
+                    <span className="status-icon">
+                      {r.status === 'success' ? '✔' : r.status === 'fail' ? '✖' : '○'}
+                    </span>
+                    <span className="time">{r.time}</span>
+                    <span className="file-name">{r.name}</span>
                   </li>
                 ))
               ) : (
@@ -196,7 +221,7 @@ export default function Dashboard() {
               type="file" 
               multiple 
               accept=".pdf" 
-              style={{display:'none'}} 
+              className="hidden-input"
               onChange={handleFileChange}
               disabled={loading}
             />

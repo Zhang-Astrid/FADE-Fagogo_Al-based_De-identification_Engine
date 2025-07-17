@@ -166,21 +166,34 @@ App 根布局：使用Grid分为导航和内容区
   font-size: 1rem;
   color: #444;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto auto 1fr;
   align-items: center;
   gap: 8px;
 }
 
-.dashboard-recent-item.success::before {
-  content: '✔';
+.dashboard-recent-item.success .status-icon {
   color: #22c55e;
-  margin-right: 6px;
 }
 
-.dashboard-recent-item.fail::before {
-  content: '✖';
+.dashboard-recent-item.fail .status-icon {
   color: #ef4444;
-  margin-right: 6px;
+}
+
+.dashboard-recent-item .status-icon {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.dashboard-recent-item .file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.dashboard-recent-item .time {
+  color: #888;
+  font-size: 0.9rem;
 }
 
 .dashboard-section-title {
@@ -396,8 +409,8 @@ App 根布局：使用Grid分为导航和内容区
   }
   
   .upload-list-process-btn:hover {
-    background: #1d4ed8;
-  }
+  background: #2563eb;
+}
   
   .upload-list-delete-btn {
     background: #ef4444;
@@ -560,7 +573,7 @@ App 根布局：使用Grid分为导航和内容区
   transition: background 0.2s;
 }
 .config-btn:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 .config-template-row {
   flex-direction: row;
@@ -589,7 +602,7 @@ App 根布局：使用Grid分为导航和内容区
   align-self: flex-end;
 }
 .config-main-btn:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 
 /* 选中文档列表样式 */
@@ -772,7 +785,7 @@ App 根布局：使用Grid分为导航和内容区
   transition: background 0.2s;
 }
 .preview-main-btn:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 
 /* 预览页面新增样式 */
@@ -824,7 +837,7 @@ App 根布局：使用Grid分为导航和内容区
 }
 
 .preview-error button:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 
 .preview-document-info {
@@ -832,7 +845,7 @@ App 根布局：使用Grid分为导航和内容区
   padding: 12px 16px;
   border-radius: 6px;
   margin-bottom: 24px;
-  color: #1e40af;
+  color: #2563eb;
 }
 
 .pdf-iframe {
@@ -931,7 +944,7 @@ App 根布局：使用Grid分为导航和内容区
   transition: background 0.2s;
 }
 .result-download-btn:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 .result-section {
   width: 100%;
@@ -1011,7 +1024,7 @@ App 根布局：使用Grid分为导航和内容区
   transition: background 0.2s;
 }
 .result-retry-btn:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 
 /* =========================
@@ -1109,7 +1122,7 @@ App 根布局：使用Grid分为导航和内容区
   transition: background 0.2s;
 }
 .settings-btn:hover {
-  background: #1d4ed8;
+  background: #2563eb;
 }
 .settings-regex-batch-row {
   display: flex;
@@ -1340,8 +1353,8 @@ App 根布局：使用Grid分为导航和内容区
   background: #f0f8ff;
 }
 .processed-table button {
-  padding: 0.25rem 0.75rem;
-  background: #1890ff;
+  padding: 0.25rem 0.5rem;
+  background: #2563eb;
   color: #fff;
   border: none;
   border-radius: 3px;
@@ -1350,3 +1363,90 @@ App 根布局：使用Grid分为导航和内容区
 .processed-table button:hover {
   background: #40a9ff;
 }
+
+/* =========================
+   PDFPreview 组件样式
+   ========================= */
+
+.preview-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.preview-header-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.preview-export-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.preview-export-btn:hover {
+  background: #1d4ed8;
+}
+
+.preview-empty-message {
+  text-align: center;
+  margin: 2rem;
+  color: #888;
+  font-size: 1rem;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.user-welcome {
+  float: right;
+  margin-left: 2em;
+}
+
+.config-error {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.config-document-info {
+  background: #e8f4fd;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.config-secondary-btn {
+  margin-left: 12px;
+}
+
+.preview-export-btn,
+.config-btn,
+.config-main-btn,
+.result-download-btn,
+.result-retry-btn,
+.settings-btn,
+.upload-list-process-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+/* 兼容部分按钮有padding/font-size单独定义 */

@@ -351,3 +351,18 @@ export async function exportAllProcessedDocuments() {
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
 }
+
+// 获取仪表板统计数据
+export async function getDashboardStats() {
+  const response = await fetch('/api/documents/dashboard_stats/', {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '获取仪表板统计数据失败');
+  }
+  
+  return await response.json();
+}

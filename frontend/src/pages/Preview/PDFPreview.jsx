@@ -114,9 +114,9 @@ export default function PDFPreview() {
       <h1 className="preview-title">文件预览与敏感信息校正</h1>
       {/* 历史处理结果表格始终显示 */}
       <div className="preview-processed-list">
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <h2 style={{margin:0}}>历史处理结果</h2>
-          <button onClick={handleExportAll} style={{marginLeft:'auto'}}>全部导出</button>
+        <div className="preview-header-row">
+          <h2 className="preview-header-title">历史处理结果</h2>
+          <button className="preview-export-btn" onClick={handleExportAll}>全部导出</button>
         </div>
         <table className="processed-table">
           <thead>
@@ -125,7 +125,7 @@ export default function PDFPreview() {
               <th>处理时间</th>
               <th>配置摘要</th>
               <th>状态</th>
-              <th>操作</th>
+              <th>预览</th>
               <th>下载</th>
               <th>删除</th>
             </tr>
@@ -187,7 +187,7 @@ export default function PDFPreview() {
               </tr>
             ))}
             {processedList.length === 0 && (
-              <tr><td colSpan={7} style={{textAlign:'center'}}>暂无处理记录</td></tr>
+              <tr><td colSpan={7} className="preview-empty-message">暂无处理记录</td></tr>
             )}
           </tbody>
         </table>
@@ -265,7 +265,7 @@ export default function PDFPreview() {
       )}
       {/* 没有选中处理记录时的提示 */}
       {!selectedProcessed && (
-        <div style={{textAlign:'center', margin:'2rem', color:'#888'}}>请选择或新建处理记录</div>
+        <div className="preview-empty-message">请选择或新建处理记录</div>
       )}
       {/* 加载/错误提示 */}
       {loading && <div className="preview-loading"><div className="loading-spinner"></div><p>正在加载预览数据...</p></div>}

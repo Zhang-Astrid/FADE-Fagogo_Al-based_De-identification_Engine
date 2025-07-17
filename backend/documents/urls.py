@@ -16,4 +16,7 @@ urlpatterns = [
     path('preview/<str:document_code>/<int:processed_id>/', views.preview_document, name='preview_document'),
     path('processed-info/<int:processed_id>/', views.processed_document_info, name='processed_document_info'),
     path('export_all/', views.export_all_processed_documents, name='export_all_processed_documents'),
+    
+    # 仪表板统计
+    path('dashboard_stats/', views.get_dashboard_stats, name='get_dashboard_stats'),
 ] 
