@@ -83,15 +83,23 @@ def process(root_path, config, config_hash):
     for img in imgs_bin:
         _, buffer = cv2.imencode(".png", img)
         imgs.append(buffer.tobytes())
-    
-    os.makedirs(os.path.join(root_path, 'outputs', config_hash), exist_ok=True)
-    with open(os.path.join(root_path, 'outputs', config_hash, 'result.pdf'), "wb") as f:
+
+    # 直接生成到 FileField 目标路径
+    user = config.get('__user')  # 兼容性处理，实际调用时传递 user
+    document_code = config.get('__document_code')
+    if user is not None and document_code is not None:
+        processed_pdf_path = os.path.join('media', user, document_code, f"processed_{config_hash}.pdf")
+    else:
+        # 兼容旧调用方式
+        processed_pdf_path = os.path.join(root_path, f"processed_{config_hash}.pdf")
+    os.makedirs(os.path.dirname(processed_pdf_path), exist_ok=True)
+    with open(processed_pdf_path, "wb") as f:
         f.write(img2pdf.convert(imgs))
-    
-    # 返回处理结果
+
     return {
         'success': True,
         'processing_results': processing_results,
         'total_pages': total_pages,
-        'processed_pages': processed_pages
+        'processed_pages': processed_pages,
+        'processed_pdf_path': processed_pdf_path
     }

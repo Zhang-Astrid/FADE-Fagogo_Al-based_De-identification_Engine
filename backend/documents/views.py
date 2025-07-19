@@ -190,6 +190,11 @@ def process_document(request):
         # 生成配置哈希
         config_str = json.dumps(config, sort_keys=True)
         config_hash = hashlib.md5(config_str.encode()).hexdigest()
+        # 传递 user 和 document_code 给 process.py，确保路径唯一
+        config_with_user = dict(config)
+        config_with_user['__user'] = request.user.username
+        config_with_user['__document_code'] = document.document_code
+        process_result = process(document.get_storage_path(), config_with_user, config_hash)
         print(f"[DEBUG] 传递给 process.py 的参数: 路径={document.get_storage_path()}, config={config}, config_hash={config_hash}")
         
         # 检查是否已有相同配置的处理结果
@@ -221,7 +226,6 @@ def process_document(request):
         start_time = 0
         # task = asyncio.create_task(process(document.get_storage_path(), config, config_hash))
         logger.info(f"文件地址：{document.get_storage_path()}")
-        process_result = process(document.get_storage_path(), config, config_hash)
         # 处理过程
         processed_doc.status = 'processing'
         processed_doc.save()
@@ -230,11 +234,11 @@ def process_document(request):
         end_time = 1
         if process_result and process_result.get('success'):
             # 保存处理后PDF到processed_file字段
-            processed_pdf_path = os.path.join(document.get_storage_path(), 'outputs', config_hash, 'result.pdf')
-            if os.path.exists(processed_pdf_path):
-                from django.core.files import File
-                with open(processed_pdf_path, 'rb') as f:
-                    processed_doc.processed_file.save(f'processed_{config_hash}.pdf', File(f), save=False)
+            processed_pdf_path = process_result.get('processed_pdf_path')
+            if processed_pdf_path and os.path.exists(processed_pdf_path):
+                # 只保存相对路径，避免重复存储
+                rel_path = os.path.relpath(processed_pdf_path, 'media')
+                processed_doc.processed_file.name = rel_path.replace('\\', '/')
             processed_doc.status = 'completed'
             processed_doc.total_fields = len(config)
             processed_doc.processing_time = end_time - start_time
