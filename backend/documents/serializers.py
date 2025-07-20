@@ -81,11 +81,29 @@ class DocumentConfigSerializer(serializers.Serializer):
         """验证配置格式，处理方式严格参考img.py"""
         if not isinstance(value, dict):
             raise serializers.ValidationError("配置必须是JSON对象")
+        
         # 允许的处理方式与img.py保持一致
         allowed_methods = ['mosaic', 'blur', 'black', 'empty']
+        allowed_compute_modes = ['cpu', 'gpu']
+        allowed_model_types = ['ocr', 'llm']
+        
         for field_name, method in value.items():
             if not isinstance(field_name, str) or not isinstance(method, str):
                 raise serializers.ValidationError("配置格式错误")
+            
+            # 特殊处理新增的配置选项
+            if field_name == 'compute_mode':
+                if method not in allowed_compute_modes:
+                    raise serializers.ValidationError(f"不支持的计算模式: {method} (仅支持: {allowed_compute_modes})")
+                continue
+                
+            if field_name == 'model_type':
+                if method not in allowed_model_types:
+                    raise serializers.ValidationError(f"不支持的模型类型: {method} (仅支持: {allowed_model_types})")
+                continue
+            
+            # 验证处理方式
             if method not in allowed_methods:
                 raise serializers.ValidationError(f"不支持的处理方式: {method} (仅支持: {allowed_methods})")
+        
         return value 

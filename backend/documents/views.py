@@ -606,3 +606,46 @@ def get_dashboard_stats(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_system_config_options(request):
+    """获取系统支持的配置选项"""
+    try:
+        config_options = {
+            'compute_modes': [
+                {'value': 'cpu', 'label': 'CPU', 'description': '使用CPU进行计算，适合所有环境'},
+                {'value': 'gpu', 'label': 'GPU', 'description': '使用GPU加速计算，需要CUDA环境支持'}
+            ],
+            'model_types': [
+                {'value': 'ocr', 'label': 'OCR', 'description': '使用OCR技术进行文字识别和敏感信息检测'},
+                {'value': 'llm', 'label': 'LLM', 'description': '使用大语言模型进行智能文本分析和敏感信息识别'}
+            ],
+            'processing_methods': [
+                {'value': 'black', 'label': '黑条遮挡', 'description': '用黑色矩形遮挡敏感信息'},
+                {'value': 'mosaic', 'label': '马赛克', 'description': '用马赛克效果模糊敏感信息'},
+                {'value': 'blur', 'label': '高斯模糊', 'description': '用高斯模糊效果处理敏感信息'}
+            ],
+            'sensitive_fields': [
+                {'key': 'name', 'label': '姓名 (NER)', 'description': '识别文档中的个人姓名'},
+                {'key': 'address', 'label': '地址 (NER)', 'description': '识别文档中的地址信息'},
+                {'key': 'company', 'label': '公司名 (NER)', 'description': '识别文档中的公司名称'},
+                {'key': 'email', 'label': '邮箱 (正则)', 'description': '识别文档中的邮箱地址'},
+                {'key': 'sens_number', 'label': '长数字字母混合 (正则)', 'description': '识别身份证号、手机号等长数字字母组合'}
+            ],
+            'defaults': {
+                'compute_mode': 'cpu',
+                'model_type': 'ocr',
+                'processing_method': 'black'
+            }
+        }
+        
+        return Response({
+            'success': True,
+            'config_options': config_options
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -17,6 +17,9 @@ urlpatterns = [
     path('processed-info/<int:processed_id>/', views.processed_document_info, name='processed_document_info'),
     path('export_all/', views.export_all_processed_documents, name='export_all_processed_documents'),
     
+    # 系统配置
+    path('config_options/', views.get_system_config_options, name='get_system_config_options'),
+    
     # 仪表板统计
     path('dashboard_stats/', views.get_dashboard_stats, name='get_dashboard_stats'),
 ] 

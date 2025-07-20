@@ -366,3 +366,18 @@ export async function getDashboardStats() {
   
   return await response.json();
 }
+
+// 获取系统配置选项
+export async function getSystemConfigOptions() {
+  const response = await fetch('/api/documents/config_options/', {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '获取配置选项失败');
+  }
+  
+  return await response.json();
+}

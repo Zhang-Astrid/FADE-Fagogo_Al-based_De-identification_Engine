@@ -12,11 +12,15 @@ BLUR_KERNEL = (51, 51)
 COVER_METHODS = {"blur": blur, "mosaic":mosaic, "black":black, "empty":empty}
 
 def process(root_path, config, config_hash):
-    # Initialize the detector
-    detector = Detector()
+    # 从配置中提取处理选项
+    compute_mode = config.get('compute_mode', 'cpu')
+    model_type = config.get('model_type', 'ocr')
+    
+    # Initialize the detector with specified options
+    detector = Detector(compute_mode=compute_mode, model_type=model_type)
     pdf_file = 'origin.pdf'
     pdf_path = os.path.join(root_path, pdf_file)
-    print(f"Processing {pdf_path}")
+    print(f"Processing {pdf_path} with compute_mode={compute_mode}, model_type={model_type}")
     
     # 存储处理结果
     processing_results = {}
@@ -101,5 +105,7 @@ def process(root_path, config, config_hash):
         'processing_results': processing_results,
         'total_pages': total_pages,
         'processed_pages': processed_pages,
-        'processed_pdf_path': processed_pdf_path
+        'processed_pdf_path': processed_pdf_path,
+        'compute_mode': compute_mode,
+        'model_type': model_type
     }
