@@ -6,30 +6,30 @@ from rapidocr import RapidOCR
 import re
 
 class Detector:
-    def __init__(self, compute_mode='cpu', model_type='ocr'):
+    def __init__(self, compute_mode='cpu', model_type='ner'):
         # 存储配置选项
         self.compute_mode = compute_mode
         self.model_type = model_type
         
-        # OCR module
+        # NER module
         self.ocr = RapidOCR()
         
         # NLP module - 根据模型类型选择不同的模型
-        if model_type == 'ocr':
-            # 使用OCR模式，保持原有的NER模型
+        if model_type == 'ner':
+            # 使用NER模式，保持原有的NER模型
             self.ner = pipeline("token-classification", model="gyr66/Ernie-3.0-base-chinese-finetuned-ner")
         elif model_type == 'llm':
             # 使用LLM模式，这里可以集成大语言模型
             # TODO: 集成具体的LLM模型
             self.ner = pipeline("token-classification", model="gyr66/Ernie-3.0-base-chinese-finetuned-ner")
-            print(f"LLM模式暂未实现，使用默认OCR模型")
+            print(f"LLM模式暂未实现，使用默认NER模型")
         else:
             raise ValueError(f"不支持的模型类型: {model_type}")
 
         # Sensitive entities to extract
         self.sensitive_entities = ["B-name", "I-name", "B-company", "I-company", "B-address", "I-address"]
 
-        self.output_dir = ""  # Directory to save OCR results
+        self.output_dir = ""  # Directory to save NER results
         
         print(f"Detector initialized with compute_mode={compute_mode}, model_type={model_type}")
 

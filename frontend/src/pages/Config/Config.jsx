@@ -23,12 +23,12 @@ const CONFIG_CONSTANTS = {
     { value: "gpu", label: "GPU" },
   ],
   modelOptions: [
-    { value: "ocr", label: "OCR" },
+    { value: "ner", label: "NER" },
     { value: "llm", label: "LLM" },
   ],
   defaults: {
     computeMode: 'cpu',
-    modelType: 'ocr',
+    modelType: 'ner',
     method: 'black'
   }
 };
@@ -37,7 +37,7 @@ export default function Config() {
   const [fields] = useState(CONFIG_CONSTANTS.fields);
   const [selected, setSelected] = useState({}); // {name: {checked: true, method: 'blur'}}
   const [computeMode, setComputeMode] = useState(CONFIG_CONSTANTS.defaults.computeMode); // CPU/GPU选择
-  const [modelType, setModelType] = useState(CONFIG_CONSTANTS.defaults.modelType); // OCR/LLM选择
+  const [modelType, setModelType] = useState(CONFIG_CONSTANTS.defaults.modelType); // NER/LLM选择
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);

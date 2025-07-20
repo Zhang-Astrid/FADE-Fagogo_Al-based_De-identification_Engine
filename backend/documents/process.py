@@ -14,7 +14,7 @@ COVER_METHODS = {"blur": blur, "mosaic":mosaic, "black":black, "empty":empty}
 def process(root_path, config, config_hash):
     # 从配置中提取处理选项
     compute_mode = config.get('compute_mode', 'cpu')
-    model_type = config.get('model_type', 'ocr')
+    model_type = config.get('model_type', 'ner')
     
     # Initialize the detector with specified options
     detector = Detector(compute_mode=compute_mode, model_type=model_type)

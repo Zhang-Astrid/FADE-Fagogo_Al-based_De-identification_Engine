@@ -618,7 +618,7 @@ def get_system_config_options(request):
                 {'value': 'gpu', 'label': 'GPU', 'description': '使用GPU加速计算，需要CUDA环境支持'}
             ],
             'model_types': [
-                {'value': 'ocr', 'label': 'OCR', 'description': '使用OCR技术进行文字识别和敏感信息检测'},
+                {'value': 'ner', 'label': 'NER', 'description': '使用NER技术进行文字识别和敏感信息检测'},
                 {'value': 'llm', 'label': 'LLM', 'description': '使用大语言模型进行智能文本分析和敏感信息识别'}
             ],
             'processing_methods': [
@@ -635,7 +635,7 @@ def get_system_config_options(request):
             ],
             'defaults': {
                 'compute_mode': 'cpu',
-                'model_type': 'ocr',
+                'model_type': 'ner',
                 'processing_method': 'black'
             }
         }

@@ -85,7 +85,7 @@ class DocumentConfigSerializer(serializers.Serializer):
         # 允许的处理方式与img.py保持一致
         allowed_methods = ['mosaic', 'blur', 'black', 'empty']
         allowed_compute_modes = ['cpu', 'gpu']
-        allowed_model_types = ['ocr', 'llm']
+        allowed_model_types = ['ner', 'llm']
         
         for field_name, method in value.items():
             if not isinstance(field_name, str) or not isinstance(method, str):
