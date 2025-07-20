@@ -2,28 +2,42 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { processDocument, getDocumentDetail } from "../../api/redact";
 
-// 只保留detector.py支持的五类敏感信息类型
-const defaultFields = [
-  { group: "敏感信息类型", fields: [
-    { key: "name", label: "姓名 (NER)" },
-    { key: "address", label: "地址 (NER)" },
-    { key: "company", label: "公司名 (NER)" },
-    { key: "email", label: "邮箱 (正则)" },
-    { key: "sens_number", label: "长数字字母混合 (正则)" },
-  ]},
-];
-
-const methodOptions = [
-  { value: "mosaic", label: "马赛克" },
-  { value: "blur", label: "高斯模糊" },
-  { value: "black", label: "黑条遮挡" },
-];
+// 配置常量
+const CONFIG_CONSTANTS = {
+  fields: [
+    { group: "敏感信息类型", fields: [
+      { key: "name", label: "姓名 (NER)" },
+      { key: "address", label: "地址 (NER)" },
+      { key: "company", label: "公司名 (NER)" },
+      { key: "email", label: "邮箱 (正则)" },
+      { key: "sens_number", label: "长数字字母混合 (正则)" },
+    ]},
+  ],
+  methodOptions: [
+    { value: "black", label: "黑条遮挡" },
+    { value: "mosaic", label: "马赛克" },
+    { value: "blur", label: "高斯模糊" },
+  ],
+  computeOptions: [
+    { value: "cpu", label: "CPU" },
+    { value: "gpu", label: "GPU" },
+  ],
+  modelOptions: [
+    { value: "ocr", label: "OCR" },
+    { value: "llm", label: "LLM" },
+  ],
+  defaults: {
+    computeMode: 'cpu',
+    modelType: 'ocr',
+    method: 'black'
+  }
+};
 
 export default function Config() {
-  const [fields, setFields] = useState(defaultFields);
+  const [fields] = useState(CONFIG_CONSTANTS.fields);
   const [selected, setSelected] = useState({}); // {name: {checked: true, method: 'blur'}}
-  const [customField, setCustomField] = useState("");
-  const [templateName, setTemplateName] = useState("");
+  const [computeMode, setComputeMode] = useState(CONFIG_CONSTANTS.defaults.computeMode); // CPU/GPU选择
+  const [modelType, setModelType] = useState(CONFIG_CONSTANTS.defaults.modelType); // OCR/LLM选择
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);
@@ -81,6 +95,7 @@ export default function Config() {
     }
   };
 
+  // 处理字段勾选状态变化
   function handleFieldCheck(group, key, checked) {
     setSelected(sel => ({
       ...sel,
@@ -88,53 +103,56 @@ export default function Config() {
     }));
   }
   
+  // 处理字段方法选择变化
   function handleMethodChange(key, method) {
     setSelected(sel => ({
       ...sel,
       [key]: { ...sel[key], method }
     }));
   }
-  
-  function handleAddCustomField() {
-    if (!customField.trim()) return;
-    setFields(f => [
-      ...f,
-      { group: "自定义字段", fields: [{ key: customField.trim(), label: customField.trim() }] }
-    ]);
-    setCustomField("");
-  }
-  
-  function handleSaveTemplate() {
-    if (!templateName.trim()) return;
-    // 模板保存逻辑（可扩展）
-    setTemplateName("");
-    alert("模板已保存");
-  }
-  
-  async function handleSubmit() {
-    // 获取要处理的文档代码
-    let documentCodes = [];
-    if (selectedDocuments.length > 0) {
-      documentCodes = selectedDocuments.map(doc => doc.document_code);
-    } else if (window.selectedDocumentCode) {
-      documentCodes = [window.selectedDocumentCode];
-    } else {
-      setError('请先选择要处理的文档');
-      return;
-    }
 
-    // 构造config参数：所有字段都要传递，未勾选的为 empty，顺序与 fields 配置一致
+  // 构建处理配置
+  function buildProcessConfig() {
     const config = {};
     fields.forEach(group => {
       group.fields.forEach(field => {
-        // 按 fields 顺序插入 key，保证顺序一致
         if (selected[field.key]?.checked) {
-          config[field.key] = selected[field.key].method || 'mosaic';
+          config[field.key] = selected[field.key].method || CONFIG_CONSTANTS.defaults.method;
         } else {
           config[field.key] = 'empty';
         }
       });
     });
+    
+    // 添加处理配置选项
+    config.compute_mode = computeMode;
+    config.model_type = modelType;
+    
+    return config;
+  }
+
+  // 获取要处理的文档代码
+  function getDocumentCodes() {
+    if (selectedDocuments.length > 0) {
+      return selectedDocuments.map(doc => doc.document_code);
+    } else if (window.selectedDocumentCode) {
+      return [window.selectedDocumentCode];
+    }
+    return [];
+  }
+  
+
+  
+  async function handleSubmit() {
+    // 获取要处理的文档代码
+    const documentCodes = getDocumentCodes();
+    if (documentCodes.length === 0) {
+      setError('请先选择要处理的文档');
+      return;
+    }
+
+    // 构建处理配置
+    const config = buildProcessConfig();
 
     if (Object.keys(config).length === 0) {
       setError('请至少选择一个字段进行处理');
@@ -218,26 +236,32 @@ export default function Config() {
     }
   }
 
-  // 全部勾选并处理（演示功能）
+  // 全部勾选并处理
   async function handleSelectAllAndProcess() {
     // 获取要处理的文档代码
-    let documentCodes = [];
-    if (selectedDocuments.length > 0) {
-      documentCodes = selectedDocuments.map(doc => doc.document_code);
-    } else if (window.selectedDocumentCode) {
-      documentCodes = [window.selectedDocumentCode];
-    } else {
+    const documentCodes = getDocumentCodes();
+    if (documentCodes.length === 0) {
       setError('请先选择要处理的文档');
       return;
     }
 
-    // 自动勾选所有字段
-    const allConfig = {};
+    // 先勾选所有字段并设置为黑色遮挡
+    const newSelected = {};
     fields.forEach(group => {
       group.fields.forEach(field => {
-        allConfig[field.key] = 'black'; // 默认使用涂黑处理
+        newSelected[field.key] = {
+          checked: true,
+          method: CONFIG_CONSTANTS.defaults.method // 设置为默认方法
+        };
       });
     });
+    
+    // 更新选中状态
+    setSelected(newSelected);
+
+    // 构建处理配置
+    const allConfig = buildProcessConfig();
+    
     if (Object.keys(allConfig).length === 0) {
       setError('没有可处理的字段');
       alert('没有可处理的字段');
@@ -295,6 +319,7 @@ export default function Config() {
 
   return (
     <div className="config-root">
+      {/* 页面标题 */}
       <h1 className="config-title">脱敏配置</h1>
       
       {error && (
@@ -320,72 +345,88 @@ export default function Config() {
         </div>
       )}
       
+      {/* 处理配置区域 */}
       <div className="config-card">
-        <div className="config-section-title">字段勾选与方式选择</div>
+        <div className="config-section-title">处理配置</div>
+        <div className="config-options-row">
+          <div className="config-option-group">
+            <label className="config-option-label">计算模式:</label>
+            <select 
+              className="config-option-select" 
+              value={computeMode} 
+              onChange={e => setComputeMode(e.target.value)}
+            >
+              {CONFIG_CONSTANTS.computeOptions.map(opt => (
+                <option value={opt.value} key={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="config-option-group">
+            <label className="config-option-label">模型类型:</label>
+            <select 
+              className="config-option-select" 
+              value={modelType} 
+              onChange={e => setModelType(e.target.value)}
+            >
+              {CONFIG_CONSTANTS.modelOptions.map(opt => (
+                <option value={opt.value} key={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* 字段选择区域 */}
+      <div className="config-card">
+        <div className="config-section-header">
+          <div className="config-section-title">字段与模糊方式选择</div>
+          <button 
+            className="config-main-btn config-secondary-btn" 
+            onClick={handleSelectAllAndProcess}
+            disabled={loading}
+          >
+            {loading ? '处理中...' : '全部勾选并处理(默认黑条遮挡)'}
+          </button>
+        </div>
         <div className="config-field-groups">
           {fields.map((g, i) => (
             <div className="config-field-group" key={g.group+"-"+i}>
-              <div className="config-field-group-title">{g.group}</div>
               <div className="config-field-list">
                 {g.fields.map(f => (
                   <div className="config-field-item" key={f.key}>
-                    <input 
-                      type="checkbox" 
-                      id={f.key} 
-                      checked={selected[f.key]?.checked||false} 
-                      onChange={e=>handleFieldCheck(g.group, f.key, e.target.checked)} 
-                    />
-                    <label htmlFor={f.key}>{f.label}</label>
-                    {selected[f.key]?.checked && (
-                      <select 
-                        className="config-method-select" 
-                        value={selected[f.key]?.method||methodOptions[0].value} 
-                        onChange={e=>handleMethodChange(f.key, e.target.value)}
-                      >
-                        {methodOptions.map(opt => <option value={opt.value} key={opt.value}>{opt.label}</option>)}
-                      </select>
-                    )}
+                    <div className="config-field-checkbox">
+                      <input 
+                        type="checkbox" 
+                        id={f.key} 
+                        checked={selected[f.key]?.checked||false} 
+                        onChange={e=>handleFieldCheck(g.group, f.key, e.target.checked)} 
+                      />
+                      <label htmlFor={f.key}>{f.label}</label>
+                      {selected[f.key]?.checked && (
+                        <select 
+                          className="config-method-select" 
+                          value={selected[f.key]?.method||CONFIG_CONSTANTS.methodOptions[0].value} 
+                          onChange={e=>handleMethodChange(f.key, e.target.value)}
+                        >
+                          {CONFIG_CONSTANTS.methodOptions.map(opt => <option value={opt.value} key={opt.value}>{opt.label}</option>)}
+                        </select>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           ))}
         </div>
-        <div className="config-custom-field-row">
-          <input 
-            className="config-custom-field-input" 
-            placeholder="自定义字段名" 
-            value={customField} 
-            onChange={e=>setCustomField(e.target.value)} 
-          />
-          <button className="config-btn" onClick={handleAddCustomField} type="button">添加字段</button>
-        </div>
       </div>
       
-      <div className="config-card config-template-row">
-        <input 
-          className="config-template-input" 
-          placeholder="模板名称" 
-          value={templateName} 
-          onChange={e=>setTemplateName(e.target.value)} 
-        />
-        <button className="config-btn" onClick={handleSaveTemplate} type="button">保存为模板</button>
-      </div>
-      
+      {/* 提交按钮 */}
       <button 
         className="config-main-btn" 
         onClick={handleSubmit}
         disabled={loading}
       >
         {loading ? '处理中...' : '提交处理'}
-      </button>
-      
-      <button 
-        className="config-main-btn config-secondary-btn" 
-        onClick={handleSelectAllAndProcess}
-        disabled={loading}
-      >
-        {loading ? '处理中...' : '全部勾选并处理'}
       </button>
     </div>
   );

@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import Dashboard from "./pages/Dashboard/Dashboard.jsx";
 import Config from "./pages/Config/Config.jsx";
-import Settings from "./pages/Settings/Settings.jsx";
-import Results from "./pages/Results/Results.jsx";
-import Result from "./pages/History/History.jsx";
+
 import PDFPreview from "./pages/Preview/PDFPreview.jsx";
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
@@ -57,21 +55,21 @@ function App() {
             <div className="app-root">
               <nav className="main-nav-bar">
                 <div className="main-nav-container">
-                  <Link to="/dashboard" className="main-nav-link">首页</Link>
-                  <Link to="/config" className="main-nav-link">处理配置</Link>
-                  <Link to="/preview" className="main-nav-link">预览导出</Link>
-                  {/* <Link to="/result" className="main-nav-link">处理结果</Link> */}
-                  <Link to="/settings" className="main-nav-link">系统设置</Link>
-                  <span className="user-welcome">欢迎，{user?.username} <button onClick={handleLogout}>退出</button></span>
+                  <div className="nav-links">
+                    <Link to="/dashboard" className="main-nav-link">首页</Link>
+                    <Link to="/config" className="main-nav-link">处理配置</Link>
+                    <Link to="/preview" className="main-nav-link">预览导出</Link>
+                  </div>
+                  <div className="user-section">
+                    <span className="user-welcome">欢迎，{user?.username}</span>
+                    <button className="logout-btn" onClick={handleLogout}>退出</button>
+                  </div>
                 </div>
               </nav>
               <div className="main-content-container">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/config" element={<Config />} />
-                  <Route path="/settings" element={<Settings />} />
-                  {/* <Route path="/results" element={<Results />} /> */}
-                  {/* <Route path="/result" element={<Result />} /> */}
                   <Route path="/preview" element={<PDFPreview />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

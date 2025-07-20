@@ -19,14 +19,44 @@ App 根布局：使用Grid分为导航和内容区
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
-/* 导航容器：横向排列导航项 */
+/* 导航容器：使用grid布局，左侧导航链接，右侧用户信息 */
 .main-nav-container {
   display: grid;
-  grid-auto-flow: column;
+  grid-template-columns: 1fr auto;
   gap: 32px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px 0;
+  padding: 16px 24px;
+  align-items: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .main-nav-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 12px 16px;
+  }
+  
+  .nav-links {
+    gap: 16px;
+    justify-content: center;
+  }
+  
+  .user-section {
+    justify-content: center;
+  }
+  
+  .main-nav-link {
+    padding: 6px 10px;
+    font-size: 0.95rem;
+  }
+}
+
+/* 导航链接容器 */
+.nav-links {
+  display: flex;
+  gap: 32px;
   align-items: center;
 }
 
@@ -42,6 +72,39 @@ App 根布局：使用Grid分为导航和内容区
 .main-nav-link:hover {
   background: #f0f4ff;
   color: #2563eb;
+}
+
+/* 用户信息区域 */
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 用户欢迎信息 */
+.user-welcome {
+  font-size: 0.95rem;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 退出按钮 */
+.logout-btn {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
 }
 
 /* 内容区自适应宽度和内边距 */
@@ -512,11 +575,20 @@ App 根布局：使用Grid分为导航和内容区
   gap: 18px;
   margin-bottom: 0;
 }
+
+.config-section-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
 .config-section-title {
   font-weight: 600;
   color: #2563eb;
   font-size: 1.1rem;
-  margin-bottom: 10px;
+  margin: 0;
 }
 .config-field-groups {
   display: flex;
@@ -530,23 +602,80 @@ App 根布局：使用Grid分为导航和内容区
   margin-bottom: 8px;
 }
 .config-field-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+@media (max-width: 768px) {
+  .config-field-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 .config-field-item {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
+  min-width: 0;
 }
-.config-method-select {
-  margin-left: 8px;
-  padding: 2px 8px;
+.config-field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.config-field-checkbox label {
+  font-weight: bold;
+}
+
+.config-options-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.config-option-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-option-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  min-width: 80px;
+}
+
+.config-option-select {
+  padding: 6px 12px;
   border-radius: 4px;
   border: 1px solid #bfc7d1;
   font-size: 1rem;
   color: #2563eb;
+  background: #fff;
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .config-options-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+.config-method-select {
+  margin-left: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #bfc7d1;
+  font-size: 0.9rem;
+  color: #2563eb;
+  max-width: 100px;
 }
 .config-custom-field-row {
   display: flex;
@@ -905,353 +1034,7 @@ App 根布局：使用Grid分为导航和内容区
   background: #4b5563;
 }
 
-/* =========================
-   Result（处理结果）页面
-   ========================= */
-.result-root {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
-}
-.result-title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 16px;
-  color: #222;
-}
-.result-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  padding: 36px 40px 32px 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
-  min-width: 420px;
-}
-.result-download-btn {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 14px 38px;
-  font-size: 1.15rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 10px;
-  transition: background 0.2s;
-}
-.result-download-btn:hover {
-  background: #2563eb;
-}
-.result-section {
-  width: 100%;
-  background: #f7f9fa;
-  border-radius: 8px;
-  margin-bottom: 0;
-  margin-top: 0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-}
-.result-section-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-weight: 600;
-  color: #2563eb;
-  font-size: 1.08rem;
-  padding: 12px 18px;
-  cursor: pointer;
-  user-select: none;
-}
-.result-toggle {
-  font-size: 1.1rem;
-  color: #888;
-  margin-left: 6px;
-}
-.result-log-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0 0 10px 0;
-}
-.result-log-table th, .result-log-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-}
-.result-log-table th {
-  background: #f0f4ff;
-  color: #2563eb;
-  font-weight: 600;
-}
-.result-log-table tr.fail td {
-  color: #ef4444;
-}
-.result-export-btn {
-  margin-left: 10px;
-  background: #e0e7ff;
-  color: #2563eb;
-  border: none;
-  border-radius: 4px;
-  padding: 6px 16px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.result-export-btn:hover {
-  background: #2563eb;
-  color: #fff;
-}
-.result-stats-row {
-  display: flex;
-  gap: 32px;
-  padding: 14px 18px;
-  font-size: 1.05rem;
-  color: #444;
-}
-.result-retry-btn {
-  margin-top: 18px;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 12px 32px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.result-retry-btn:hover {
-  background: #2563eb;
-}
 
-/* =========================
-   Settings（系统设置）页面
-   ========================= */
-.settings-root {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  align-items: center;
-}
-.settings-title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 16px;
-  color: #222;
-}
-.settings-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  padding: 32px 28px 28px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-width: 380px;
-  margin-bottom: 0;
-}
-.settings-section-title {
-  font-weight: 600;
-  color: #2563eb;
-  font-size: 1.1rem;
-  margin-bottom: 10px;
-}
-.settings-radio-group {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  margin-bottom: 0;
-}
-.settings-regex-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 8px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.settings-regex-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f7f9fa;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 1rem;
-  color: #444;
-}
-.settings-regex-del {
-  background: #e0e7ff;
-  color: #2563eb;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 12px;
-  font-size: 0.98rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.settings-regex-del:hover {
-  background: #2563eb;
-  color: #fff;
-}
-.settings-regex-add-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-}
-.settings-regex-input {
-  border: 1px solid #bfc7d1;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 1rem;
-  width: 180px;
-}
-.settings-btn {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 18px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.settings-btn:hover {
-  background: #2563eb;
-}
-.settings-regex-batch-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 6px;
-}
-.settings-theme-switch {
-  position: absolute;
-  top: 32px;
-  right: 48px;
-  background: #e0e7ff;
-  color: #2563eb;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 1.3rem;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  transition: background 0.2s;
-  z-index: 10;
-}
-.settings-theme-switch:hover {
-  background: #2563eb;
-  color: #fff;
-}
-.settings-card label {
-  font-size: 1rem;
-  color: #444;
-  margin-bottom: 6px;
-  cursor: pointer;
-}
-
-.settings-method-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.settings-method-detail {
-  margin-left: 12px;
-  color: #666;
-  font-size: 0.98rem;
-}
-
-.settings-mode-list,
-.settings-log-list {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  font-size: 1rem;
-  color: #444;
-}
-
-.settings-log-tip {
-  margin-top: 8px;
-  font-size: 0.85rem;
-  color: #bbb;
-}
-
-/* Settings 勾选项样式 */
-.settings-method-list > div,
-.settings-mode-list > div,
-.settings-log-list > div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.settings-method-label,
-.settings-mode-label,
-.settings-log-label {
-  font-size: 1rem;
-  color: #444;
-  cursor: pointer;
-}
-
-.settings-method-list input[type="checkbox"],
-.settings-mode-list input[type="checkbox"],
-.settings-log-list input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #2563eb;
-  cursor: pointer;
-}
-
-/* Settings radio group 样式 */
-.settings-radio-group {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 12px;
-}
-.settings-radio-label {
-  font-weight: 500;
-  color: #555;
-  margin-right: 8px;
-}
-.settings-mode-list .settings-radio-group {
-  margin-bottom: 0;
-}
-
-.settings-method-list input[type="radio"],
-.settings-mode-list input[type="radio"] {
-  accent-color: #2563eb;
-  width: 16px;
-  height: 16px;
-  margin-right: 4px;
-  cursor: pointer;
-}
-
-/* 滑块样式 */
-.settings-blur-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-}
-.settings-blur-slider {
-  width: 160px;
-  accent-color: #2563eb;
-  height: 4px;
-}
-.settings-blur-value {
-  min-width: 36px;
-  color: #2563eb;
-  font-weight: 600;
-}
 /* 登录/注册界面样式 */
 .auth-container {
   max-width: 350px;
@@ -1409,11 +1192,6 @@ App 根布局：使用Grid分为导航和内容区
   display: none;
 }
 
-.user-welcome {
-  float: right;
-  margin-left: 2em;
-}
-
 .config-error {
   background: #fee;
   color: #c33;
@@ -1431,14 +1209,14 @@ App 根布局：使用Grid分为导航和内容区
 
 .config-secondary-btn {
   margin-left: 12px;
+  margin-top: 0;
+  padding: 8px 16px;
+  font-size: 0.95rem;
 }
 
 .preview-export-btn,
 .config-btn,
 .config-main-btn,
-.result-download-btn,
-.result-retry-btn,
-.settings-btn,
 .upload-list-process-btn {
   background: #2563eb;
   color: #fff;
