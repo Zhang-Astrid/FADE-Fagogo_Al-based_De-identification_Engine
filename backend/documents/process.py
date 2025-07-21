@@ -37,7 +37,7 @@ def process(root_path, config, config_hash):
     for k, v in sens_info_locs.items():
         for page_index, x, y, w, h in v:
             # Apply the appropriate covering method based on the type
-            zoom =3
+            zoom =2
             x, y, w, h = int(x * zoom), int(y * zoom), int(w * zoom), int(h * zoom)
             COVER_METHODS[config[k]](imgs_bin[page_index], x, y, w, h, MOSAIC_SIZE, BLUR_KERNEL)
     imgs = []

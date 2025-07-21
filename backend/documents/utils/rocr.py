@@ -15,7 +15,7 @@ class ROCRProcessor:
         start_time = time.time()
         all_boxes, all_txts = [], []
         # Convert PDF pages to numpy type images
-        imgs = convert_from_path(pdf_path, dpi=100, fmt="png", thread_count=10, use_pdftocairo=True)
+        imgs = convert_from_path(pdf_path, dpi=150, fmt="png", thread_count=10, use_pdftocairo=True)
         imgs_bin = [cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR) for image in imgs]
         for i, img in enumerate(imgs_bin):
             result = self.engine(img, return_word_box=True)
