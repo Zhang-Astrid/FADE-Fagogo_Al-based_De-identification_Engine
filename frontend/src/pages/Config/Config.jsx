@@ -255,13 +255,19 @@ export default function Config() {
         };
       });
     });
-    
     // 更新选中状态
     setSelected(newSelected);
 
-    // 构建处理配置
-    const allConfig = buildProcessConfig();
-    
+    // 构建所有字段均为黑条遮挡的 config
+    const allConfig = {};
+    fields.forEach(group => {
+      group.fields.forEach(field => {
+        allConfig[field.key] = 'black';
+      });
+    });
+    allConfig.compute_mode = computeMode;
+    allConfig.model_type = modelType;
+
     if (Object.keys(allConfig).length === 0) {
       setError('没有可处理的字段');
       alert('没有可处理的字段');
@@ -306,8 +312,17 @@ export default function Config() {
         window.selectedDocuments = [];
         window.selectedDocumentCodes = [];
         window.selectedDocumentCode = null;
-        // 返回Dashboard页面
-        navigate('/dashboard');
+        // 跳转到 PDF 预览页面，传递第一个文档的参数
+        if (results.length > 0 && results[0].data && results[0].data.processed_document) {
+          navigate('/preview', {
+            state: {
+              documentCode: results[0].documentCode,
+              processedDocumentId: results[0].data.processed_document.id
+            }
+          });
+        } else {
+          navigate('/dashboard'); // 兜底
+        }
       }
     } catch (err) {
       console.error('处理失败:', err);

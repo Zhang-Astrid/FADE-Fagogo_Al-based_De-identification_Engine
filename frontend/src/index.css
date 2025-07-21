@@ -1228,3 +1228,8 @@ App 根布局：使用Grid分为导航和内容区
 }
 
 /* 兼容部分按钮有padding/font-size单独定义 */
+
+.main-nav-link.active {
+  background: #2564eb1b;
+  color: #2563eb;
+}

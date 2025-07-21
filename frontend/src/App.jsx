@@ -16,6 +16,40 @@ function PrivateRoute({ user, children }) {
   return children;
 }
 
+function MainNavBar({ user, handleLogout }) {
+  const location = useLocation();
+  return (
+    <nav className="main-nav-bar">
+      <div className="main-nav-container">
+        <div className="nav-links">
+          <Link
+            to="/dashboard"
+            className={`main-nav-link${location.pathname.startsWith("/dashboard") ? " active" : ""}`}
+          >
+            首页
+          </Link>
+          <Link
+            to="/config"
+            className={`main-nav-link${location.pathname.startsWith("/config") ? " active" : ""}`}
+          >
+            处理配置
+          </Link>
+          <Link
+            to="/preview"
+            className={`main-nav-link${location.pathname.startsWith("/preview") ? " active" : ""}`}
+          >
+            预览导出
+          </Link>
+        </div>
+        <div className="user-section">
+          <span className="user-welcome">欢迎，{user?.username}</span>
+          <button className="logout-btn" onClick={handleLogout}>退出</button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(() => {
     // 页面刷新后自动从localStorage恢复登录状态
@@ -53,19 +87,7 @@ function App() {
         <Route path="/*" element={
           <PrivateRoute user={user}>
             <div className="app-root">
-              <nav className="main-nav-bar">
-                <div className="main-nav-container">
-                  <div className="nav-links">
-                    <Link to="/dashboard" className="main-nav-link">首页</Link>
-                    <Link to="/config" className="main-nav-link">处理配置</Link>
-                    <Link to="/preview" className="main-nav-link">预览导出</Link>
-                  </div>
-                  <div className="user-section">
-                    <span className="user-welcome">欢迎，{user?.username}</span>
-                    <button className="logout-btn" onClick={handleLogout}>退出</button>
-                  </div>
-                </div>
-              </nav>
+              <MainNavBar user={user} handleLogout={handleLogout} />
               <div className="main-content-container">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
