@@ -89,6 +89,34 @@ class Detector:
                 newline_num += 1
         n_sentence = sentence.replace('\n', '')
         sens_info_loc = {}
+
+        # 处理敏感信息坐标重叠的问题
+        locs = []
+        for key, phrases in sens_info.items():
+            for phrase in phrases:
+                n_indexes = [match.start() for match in re.finditer(re.escape(phrase), n_sentence)]
+                for start in n_indexes:
+                    end = start + len(phrase)
+                    locs.append((start, end))
+        locs.sort(key=lambda x: x[0])  # Sort by start index
+        # Merge overlapping locations
+        merged_locs_dict = {}
+        merged_locs = set()
+        i = 0
+        while i < len(locs):
+            merge_loc = locs[i]
+            keys = [locs[i]]
+            for j in range(i + 1, len(locs)):
+                if locs[j][0] < merge_loc[1]:
+                    merge_loc = (min(merge_loc[0], locs[j][0]), max(merge_loc[1], locs[j][1]))
+                    keys.append(locs[j])
+                else:
+                    break
+            i = i + len(keys)
+            for key in keys:
+                merged_locs.add(key)
+            merged_locs_dict[keys[0]] = merge_loc   # 不同敏感信息只需要保留一个即可，不然会重复处理，对应的种类与图片处理方法就随机选了第一个，标记为“选中”
+
         for key, phrases in sens_info.items():
             sens_loc = []
             for phrase in phrases:
@@ -96,7 +124,16 @@ class Detector:
                 for n_start in n_indexes:
                     nl_pos = [] # positions of the word just before '\n' in the phrase
                     last_nl = nl_nums[n_start]
-                    for i in range(n_start, n_start + len(phrase)):
+                    
+                    if (n_start, n_start + len(phrase)) in merged_locs:
+                        if (n_start, n_start + len(phrase)) in merged_locs_dict.keys():
+                            n_start, n_end = merged_locs_dict[(n_start, n_start + len(phrase))]   # 是“选中”的敏感信息
+                        else:
+                            continue    # 若此点未被”选中“，则跳过
+                    else:
+                        n_end = n_start + len(phrase)
+                    
+                    for i in range(n_start, n_end):
                         if nl_nums[i] != last_nl:
                             last_nl = nl_nums[i]
                             nl_pos.append(i-1)
@@ -111,7 +148,7 @@ class Detector:
                         n_box_start_i = n_box_end_i + 1
                     box_start_i = n_box_start_i + nl_nums[n_box_start_i]
                     box_start = boxes[box_start_i]
-                    n_box_end_i = n_start + len(phrase) - 1
+                    n_box_end_i = n_end - 1
                     box_end_i = n_box_end_i + nl_nums[n_box_end_i]
                     box_end = boxes[box_end_i]
                     box = [box_start[0], box_start[1], box_start[2], box_end[3]-box_start[1], box_end[4]-box_start[2]]

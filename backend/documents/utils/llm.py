@@ -25,7 +25,7 @@ class LLM:
         start_time = time.time()
         categories = ['公司名', '地址', '姓名']
         chunk_size = 100
-        overlap = 20
+        overlap = 30
         chunked_text = [
             text[i:i + chunk_size] 
             for i in range(0, len(text), chunk_size - overlap)
@@ -54,7 +54,10 @@ class LLM:
             for future in concurrent.futures.as_completed(futures):
                 data = future.result()
                 for k, v in data.items():
+                    v = [item for item in v if len(item) > 1]
                     result[k].extend(v)
+        for k, v in result.items():
+            result[k] = set(v)
         end_time = time.time()
         print(f"[INFO] LLM processing time: {end_time - start_time:.2f} seconds")
         return result
