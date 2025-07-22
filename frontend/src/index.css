@@ -613,6 +613,36 @@ App 根布局：使用Grid分为导航和内容区
     gap: 12px;
   }
 }
+.config-field-single {
+  margin-bottom: 18px;
+}
+.config-field-double-row {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 8px;
+}
+.config-field-double-row .config-field-item {
+  flex: 1;
+}
+.config-field-item {
+  padding: 0 0 0 2px;
+}
+
+/* 保证checkbox和label对齐 */
+.config-field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 保证参数选择器和预览不换行 */
+.config-param-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+}
+
 .config-field-item {
   display: flex;
   align-items: center;
@@ -1232,4 +1262,67 @@ App 根布局：使用Grid分为导航和内容区
 .main-nav-link.active {
   background: #2564eb1b;
   color: #2563eb;
+}
+
+.mosaic-preview-root {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.mosaic-preview-canvas {
+  border: 1px solid #fff;
+  background: #fff;
+  vertical-align: middle;
+}
+.mosaic-preview-label {
+  font-size: 10px;
+  margin-left: 4px;
+}
+.blur-preview-root {
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  background: #ccc;
+  margin-left: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 1px #888 inset;
+}
+.black-preview-root {
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  margin-left: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 1px #888 inset;
+}
+
+.config-field-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.config-field-main {
+  flex: 1 1 220px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.config-field-extra {
+  flex: 2 1 320px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 700px) {
+  .config-field-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .config-field-main, .config-field-extra {
+    min-width: 0;
+    width: 100%;
+  }
 }

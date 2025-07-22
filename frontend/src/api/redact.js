@@ -98,6 +98,12 @@ export async function processDocument(documentCode, config) {
   console.log('=== API请求参数 ===');
   console.log('document_code:', documentCode);
   console.log('config:', config);
+  // 新增：打印所有动态参数
+  Object.keys(config).forEach(k => {
+    if (k.endsWith('_mosaic_size') || k.endsWith('_blur_kernel') || k.endsWith('_color')) {
+      console.log('附加参数', k, config[k]);
+    }
+  });
   console.log('请求体:', JSON.stringify({
     document_code: documentCode,
     config: config

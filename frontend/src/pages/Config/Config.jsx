@@ -14,7 +14,7 @@ const CONFIG_CONSTANTS = {
     ]},
   ],
   methodOptions: [
-    { value: "black", label: "黑条遮挡" },
+    { value: "black", label: "遮挡" },
     { value: "mosaic", label: "马赛克" },
     { value: "blur", label: "高斯模糊" },
   ],
@@ -32,6 +32,11 @@ const CONFIG_CONSTANTS = {
     method: 'black'
   }
 };
+
+// 字段方法参数的默认值
+const MOSAIC_SIZE_DEFAULT = 30; // 百分比
+const BLUR_KERNEL_DEFAULT = 30; // 百分比
+const BLACK_COLOR_DEFAULT = '#000000';
 
 export default function Config() {
   const [fields] = useState(CONFIG_CONSTANTS.fields);
@@ -97,17 +102,72 @@ export default function Config() {
 
   // 处理字段勾选状态变化
   function handleFieldCheck(group, key, checked) {
-    setSelected(sel => ({
+    setSelected(sel => {
+      const prev = sel[key] || {};
+      // 如果勾选且未设置method，自动设为'black'（遮挡）
+      let method = prev.method;
+      let color = prev.color;
+      if (checked && !method) {
+        method = 'black';
+        color = BLACK_COLOR_DEFAULT;
+      }
+      return {
       ...sel,
-      [key]: { ...sel[key], checked }
-    }));
+        [key]: {
+          ...prev,
+          checked,
+          method,
+          color
+        }
+      };
+    });
   }
   
   // 处理字段方法选择变化
   function handleMethodChange(key, method) {
     setSelected(sel => ({
       ...sel,
-      [key]: { ...sel[key], method }
+      [key]: {
+        ...sel[key],
+        method,
+        // 切换时重置参数
+        mosaicSize: method === 'mosaic' ? MOSAIC_SIZE_DEFAULT : undefined,
+        blurKernel: method === 'blur' ? BLUR_KERNEL_DEFAULT : undefined,
+        color: method === 'black' ? BLACK_COLOR_DEFAULT : undefined
+      }
+    }));
+  }
+
+  // 处理mosaic size滑块变化
+  function handleMosaicSizeChange(key, value) {
+    setSelected(sel => ({
+      ...sel,
+      [key]: {
+        ...sel[key],
+        mosaicSize: value
+      }
+    }));
+  }
+  // 处理blur kernel滑块变化
+  function handleBlurKernelChange(key, value) {
+    // 只允许奇数
+    const oddValue = value % 2 === 0 ? value + 1 : value;
+    setSelected(sel => ({
+      ...sel,
+      [key]: {
+        ...sel[key],
+        blurKernel: oddValue
+      }
+    }));
+  }
+  // 处理black color选择
+  function handleColorChange(key, value) {
+    setSelected(sel => ({
+      ...sel,
+      [key]: {
+        ...sel[key],
+        color: value
+      }
     }));
   }
 
@@ -118,16 +178,33 @@ export default function Config() {
       group.fields.forEach(field => {
         if (selected[field.key]?.checked) {
           config[field.key] = selected[field.key].method || CONFIG_CONSTANTS.defaults.method;
+          // 附加参数
+          if (selected[field.key].method === 'mosaic') {
+            config[`${field.key}_mosaic_size`] = selected[field.key].mosaicSize || MOSAIC_SIZE_DEFAULT;
+          } else {
+            config[`${field.key}_mosaic_size`] = null;
+          }
+          if (selected[field.key].method === 'blur') {
+            config[`${field.key}_blur_kernel`] = selected[field.key].blurKernel || BLUR_KERNEL_DEFAULT;
+          } else {
+            config[`${field.key}_blur_kernel`] = null;
+          }
+          if (selected[field.key].method === 'black') {
+            config[`${field.key}_color`] = selected[field.key].color || BLACK_COLOR_DEFAULT;
+          } else {
+            config[`${field.key}_color`] = null;
+          }
         } else {
           config[field.key] = 'empty';
+          config[`${field.key}_mosaic_size`] = null;
+          config[`${field.key}_blur_kernel`] = null;
+          config[`${field.key}_color`] = null;
         }
       });
     });
-    
     // 添加处理配置选项
     config.compute_mode = computeMode;
     config.model_type = modelType;
-    
     return config;
   }
 
@@ -251,11 +328,13 @@ export default function Config() {
       group.fields.forEach(field => {
         newSelected[field.key] = {
           checked: true,
-          method: CONFIG_CONSTANTS.defaults.method // 设置为默认方法
+          method: CONFIG_CONSTANTS.defaults.method, // black
+          color: BLACK_COLOR_DEFAULT,
+          mosaicSize: undefined,
+          blurKernel: undefined
         };
       });
     });
-    // 更新选中状态
     setSelected(newSelected);
 
     // 构建所有字段均为黑条遮挡的 config
@@ -263,6 +342,9 @@ export default function Config() {
     fields.forEach(group => {
       group.fields.forEach(field => {
         allConfig[field.key] = 'black';
+        allConfig[`${field.key}_color`] = BLACK_COLOR_DEFAULT;
+        allConfig[`${field.key}_mosaic_size`] = null;
+        allConfig[`${field.key}_blur_kernel`] = null;
       });
     });
     allConfig.compute_mode = computeMode;
@@ -330,6 +412,82 @@ export default function Config() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // 字段渲染函数，避免重复
+  function renderField(field, group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange) {
+    const method = selected[field.key]?.method || CONFIG_CONSTANTS.methodOptions[0].value;
+    return (
+      <div className="config-field-row" key={field.key}>
+        <div className="config-field-main">
+          <input
+            type="checkbox"
+            id={field.key}
+            checked={selected[field.key]?.checked || false}
+            onChange={e => handleFieldCheck(group, field.key, e.target.checked)}
+          />
+          <label htmlFor={field.key}>{field.label}</label>
+          {selected[field.key]?.checked && (
+            <select
+              className="config-method-select"
+              value={method}
+              onChange={e => handleMethodChange(field.key, e.target.value)}
+            >
+              {CONFIG_CONSTANTS.methodOptions.map(opt => (
+                <option value={opt.value} key={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="config-field-extra">
+          {selected[field.key]?.checked && (
+            <>
+              {method === 'mosaic' && (
+                <>
+                  <label>马赛克块大小：</label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={100}
+                    value={selected[field.key].mosaicSize || MOSAIC_SIZE_DEFAULT}
+                    onChange={e => handleMosaicSizeChange(field.key, Number(e.target.value))}
+                  />
+                  <span>{selected[field.key].mosaicSize || MOSAIC_SIZE_DEFAULT}%</span>
+                  <MosaicPreview percent={selected[field.key].mosaicSize || MOSAIC_SIZE_DEFAULT} />
+                </>
+              )}
+              {method === 'blur' && (
+                <>
+                  <label>模糊核大小：</label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={99}
+                    step={2}
+                    value={selected[field.key].blurKernel || BLUR_KERNEL_DEFAULT}
+                    onChange={e => handleBlurKernelChange(field.key, Number(e.target.value))}
+                  />
+                  <span>{selected[field.key].blurKernel || BLUR_KERNEL_DEFAULT}%</span>
+                  <BlurPreview percent={selected[field.key].blurKernel || BLUR_KERNEL_DEFAULT} />
+                </>
+              )}
+              {method === 'black' && (
+                <>
+                  <label>遮挡颜色：</label>
+                  <input
+                    type="color"
+                    value={selected[field.key].color || BLACK_COLOR_DEFAULT}
+                    onChange={e => handleColorChange(field.key, e.target.value)}
+                  />
+                  <span>{selected[field.key].color || BLACK_COLOR_DEFAULT}</span>
+                  <BlackPreview color={selected[field.key].color || BLACK_COLOR_DEFAULT} />
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -404,34 +562,26 @@ export default function Config() {
           </button>
         </div>
         <div className="config-field-groups">
-          {fields.map((g, i) => (
-            <div className="config-field-group" key={g.group+"-"+i}>
-              <div className="config-field-list">
-                {g.fields.map(f => (
-                  <div className="config-field-item" key={f.key}>
-                    <div className="config-field-checkbox">
-                      <input 
-                        type="checkbox" 
-                        id={f.key} 
-                        checked={selected[f.key]?.checked||false} 
-                        onChange={e=>handleFieldCheck(g.group, f.key, e.target.checked)} 
-                      />
-                      <label htmlFor={f.key}>{f.label}</label>
-                      {selected[f.key]?.checked && (
-                        <select 
-                          className="config-method-select" 
-                          value={selected[f.key]?.method||CONFIG_CONSTANTS.methodOptions[0].value} 
-                          onChange={e=>handleMethodChange(f.key, e.target.value)}
-                        >
-                          {CONFIG_CONSTANTS.methodOptions.map(opt => <option value={opt.value} key={opt.value}>{opt.label}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+          {/* 单列：姓名 */}
+          <div className="config-field-single">
+            {renderField(fields[0].fields[0], fields[0].group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange)}
+          </div>
+          {/* 单列：地址 */}
+          <div className="config-field-single">
+            {renderField(fields[0].fields[1], fields[0].group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange)}
+          </div>
+          {/* 单列：公司名 */}
+          <div className="config-field-single">
+            {renderField(fields[0].fields[2], fields[0].group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange)}
+          </div>
+          {/* 单列：邮箱 */}
+          <div className="config-field-single">
+            {renderField(fields[0].fields[3], fields[0].group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange)}
+          </div>
+          {/* 单列：长数字字母混合 */}
+          <div className="config-field-single">
+            {renderField(fields[0].fields[4], fields[0].group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange)}
+          </div>
         </div>
       </div>
       
@@ -445,4 +595,44 @@ export default function Config() {
       </button>
     </div>
   );
+}
+
+// 预览组件
+function MosaicPreview({ percent }) {
+  const ref = React.useRef();
+  React.useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#222';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText('案例', canvas.width/2, canvas.height/2);
+    const blockSize = Math.max(2, Math.round(percent/100 * 20));
+    const temp = document.createElement('canvas');
+    temp.width = Math.ceil(canvas.width/blockSize);
+    temp.height = Math.ceil(canvas.height/blockSize);
+    const tctx = temp.getContext('2d');
+    tctx.imageSmoothingEnabled = false;
+    tctx.drawImage(canvas, 0, 0, temp.width, temp.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(temp, 0, 0, temp.width, temp.height, 0, 0, canvas.width, canvas.height);
+  }, [percent]);
+  return (
+    <span className="mosaic-preview-root">
+      <canvas ref={ref} width={36} height={18} className="mosaic-preview-canvas" />
+      <span className="mosaic-preview-label">块{Math.max(2,Math.round(percent/100*20))}px</span>
+    </span>
+  );
+}
+function BlurPreview({ percent }) {
+  const blur = percent/10;
+  return (
+    <div className="blur-preview-root" style={{filter:`blur(${blur}px)`}}></div>
+  );
+}
+function BlackPreview({ color }) {
+  return <div className="black-preview-root" style={{background:color}}></div>;
 }
