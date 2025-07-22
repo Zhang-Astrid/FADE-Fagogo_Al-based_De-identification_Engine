@@ -88,6 +88,8 @@ class DocumentConfigSerializer(serializers.Serializer):
         allowed_model_types = ['ner', 'llm']
         
         for field_name, method in value.items():
+            if method is None or isinstance(method, int):
+                continue
             if not isinstance(field_name, str) or not isinstance(method, str):
                 raise serializers.ValidationError("配置格式错误")
             
@@ -102,8 +104,8 @@ class DocumentConfigSerializer(serializers.Serializer):
                     raise serializers.ValidationError(f"不支持的模型类型: {method} (仅支持: {allowed_model_types})")
                 continue
             
-            # 验证处理方式
-            if method not in allowed_methods:
-                raise serializers.ValidationError(f"不支持的处理方式: {method} (仅支持: {allowed_methods})")
+            # # 验证处理方式
+            # if method not in allowed_methods:
+            #     raise serializers.ValidationError(f"不支持的处理方式: {method} (仅支持: {allowed_methods})")
         
         return value 

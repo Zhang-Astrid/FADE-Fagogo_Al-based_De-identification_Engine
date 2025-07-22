@@ -260,6 +260,7 @@ def process_document(request):
                 if is_success:
                     successful_fields += 1
                 
+                method = "None" if method is None else method
                 ProcessingLog.objects.create(
                     processed_document=processed_doc,
                     field_name=field_name,

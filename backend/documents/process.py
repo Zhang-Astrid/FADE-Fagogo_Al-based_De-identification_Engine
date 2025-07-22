@@ -1,7 +1,7 @@
 from .utils.detector import Detector
 import img2pdf
 from pdf2image import convert_from_path
-from .utils.img import mosaic, blur, black, empty
+from .utils.img import ImageProcessor
 import numpy as np
 import cv2
 import os
@@ -9,7 +9,6 @@ import os
 # todo: Use GUI to modify those hyperparameters
 MOSAIC_SIZE = 10
 BLUR_KERNEL = (51, 51)
-COVER_METHODS = {"blur": blur, "mosaic":mosaic, "black":black, "empty":empty}
 
 def process(root_path, config, config_hash):
     # 从配置中提取处理选项
@@ -34,12 +33,16 @@ def process(root_path, config, config_hash):
     imgs = convert_from_path(pdf_path, dpi=300, fmt="png", thread_count=10, use_pdftocairo=True)
     imgs_bin = [cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR) for image in imgs]
     total_pages = len(imgs_bin)
+    img_processor = ImageProcessor()
     for k, v in sens_info_locs.items():
+        img_processor.set_mosaic_size(config.get(f'{k}_mosaic_size', MOSAIC_SIZE))
+        img_processor.set_blur_kernel(config.get(f'{k}_blur_kernel', BLUR_KERNEL))
+        img_processor.set_color(config.get(f'{k}_color', '#000000'))
         for page_index, x, y, w, h in v:
             # Apply the appropriate covering method based on the type
             zoom =2
             x, y, w, h = int(x * zoom), int(y * zoom), int(w * zoom), int(h * zoom)
-            COVER_METHODS[config[k]](imgs_bin[page_index], x, y, w, h, MOSAIC_SIZE, BLUR_KERNEL)
+            img_processor.cover(imgs_bin[page_index], x, y, w, h, method=config.get(k, 'blur'))
     imgs = []
     # Save the processed images as a PDF
     for img in imgs_bin:
