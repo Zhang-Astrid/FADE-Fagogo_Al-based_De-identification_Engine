@@ -4,12 +4,12 @@ import re
 from .ocr import OCRProcessor
 from .llm import LLM
 from .ner import NERModel
-from .rocr import ROCRProcessor
 
 class Detector:
     def __init__(self, gpu, model_type='ner'):
         # OCR module
-        self.ocr = ROCRProcessor(gpu)
+        self.ocr = OCRProcessor()
+        self.gpu = gpu
         
         # NLP modules
         self.ner = NERModel()
@@ -27,7 +27,7 @@ class Detector:
         # Check if the output directory exists, if not, process the image
         if not os.path.exists((self.ocr_path)):
             print(f"[INFO] Processing OCR for {pdf_path}")
-            self.ocr.process_pdf(pdf_path, self.ocr_path)
+            self.ocr.process_pdf(pdf_path, self.ocr_path, self.gpu)
         # Read the JSON file to get the text and bounding boxes
         print(f"[INFO] Reading OCR results from {self.ocr_path}")
         with open(self.ocr_path, 'r', encoding='utf-8') as f:
