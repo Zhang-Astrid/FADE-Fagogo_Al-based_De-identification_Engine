@@ -5,8 +5,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import time
 
 class NERModel:
-    def __init__(self):
-        device = 0 if torch.cuda.is_available() else -1
+    def __init__(self, gpu):
+        device = 0 if torch.cuda.is_available() and gpu else -1
         self.ner = pipeline("token-classification", model="gyr66/Ernie-3.0-base-chinese-finetuned-ner", device=device)
         # Sensitive entities to extract
         self.sensitive_entities = ["B-name", "I-name", "B-company", "I-company", "B-address", "I-address"]
