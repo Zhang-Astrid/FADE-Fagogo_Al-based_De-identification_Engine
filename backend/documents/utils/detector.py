@@ -12,7 +12,7 @@ class Detector:
         self.gpu = gpu
         
         # NLP modules
-        self.ner = NERModel()
+        self.ner = NERModel(gpu)
         self.llm = LLM()
 
         self.ocr_path = ""  # Directory to save OCR results
