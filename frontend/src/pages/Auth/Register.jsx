@@ -55,14 +55,14 @@ const Register = ({ onRegister, switchToLogin }) => {
           onChange={e => setPassword(e.target.value)}
           required
         />
-        <label>
-          <input
-            type="checkbox"
-            checked={isStaff}
-            onChange={e => setIsStaff(e.target.checked)}
-          />
-          管理员
-        </label>
+        {/*<label>*/}
+        {/*  <input*/}
+        {/*    type="checkbox"*/}
+        {/*    checked={isStaff}*/}
+        {/*    onChange={e => setIsStaff(e.target.checked)}*/}
+        {/*  />*/}
+        {/*  管理员*/}
+        {/*</label>*/}
         <button type="submit">注册</button>
       </form>
       {error && <div className="error">{error}</div>}

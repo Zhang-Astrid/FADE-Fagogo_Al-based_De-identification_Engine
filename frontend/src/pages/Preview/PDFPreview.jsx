@@ -136,7 +136,11 @@ export default function PDFPreview() {
                 <td>{item.document.filename}</td>
                 <td>{item.process_time ? new Date(item.process_time).toLocaleString() : '-'}</td>
                 <td>{Object.entries(item.config_data)
-                  .filter(([, v]) => v !== 'empty') // 过滤掉empty字段
+                  .filter(([key, value]) => {
+                    // 只保留五类敏感字段
+                    const allowed = ['name', 'email', 'address', 'company', 'sens_number'];
+                    return allowed.includes(key) && value !== 'empty';
+                  })
                   .map(([key, value]) => {
                     // 字段名转换为中文
                     const fieldNameMap = {
@@ -144,16 +148,13 @@ export default function PDFPreview() {
                       'address': '地址', 
                       'company': '公司名',
                       'email': '邮箱',
-                      'phone': '电话',
-                      'id_card': '身份证',
-                      'bank_card': '银行卡',
-                      'account': '账号'
+                      'sens_number': '长数字字母混合',
                     };
                     // 处理方式转换为中文
                     const methodMap = {
                       'mosaic': '马赛克',
                       'blur': '模糊',
-                      'black': '黑色遮盖',
+                      'black': '遮盖',
                       'empty': '清空'
                     };
                     const fieldName = fieldNameMap[key] || key;
