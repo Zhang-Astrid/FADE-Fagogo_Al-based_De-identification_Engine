@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import { processDocument, getDocumentDetail } from "../../api/redact";
+import { processDocument, getDocumentDetail, getProcessedDocumentInfo } from "../../api/redact";
 
 // 配置常量
 const CONFIG_CONSTANTS = {
@@ -47,6 +47,7 @@ export default function Config() {
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);
   const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const pollingRef = React.useRef(null);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -246,6 +247,7 @@ export default function Config() {
 
     setLoading(true);
     setError('');
+    navigate('/preview'); // 新增：立即跳转到预览界面
 
     try {
       // 批量处理所有选中的文档
@@ -270,43 +272,46 @@ export default function Config() {
         }
       }
 
-      // 检查处理结果
       const successCount = results.filter(r => r.success).length;
-      const totalCount = results.length;
 
-      console.log('=== 处理结果汇总 ===');
-      console.log('总文档数:', totalCount);
-      console.log('成功处理数:', successCount);
-      console.log('详细结果:', results);
-      console.log('==================');
+      // 1. 立即弹窗“已提交处理任务...”
+      alert(`已提交 ${successCount} 个文档的处理任务，请稍候，处理完成后会自动刷新。`);
 
-      if (successCount === 0) {
-        setError('所有文档处理失败');
-      } else if (successCount < totalCount) {
-        setError(`部分文档处理失败，成功处理 ${successCount}/${totalCount} 个文档`);
-      } else {
-        // 全部成功，显示成功消息
-        alert(`成功处理 ${successCount} 个文档！`);
-        
-        // 如果是单个文档处理，跳转到预览页面
-        if (documentCodes.length === 1) {
-          const processedDocumentId = results[0].data.processed_document.id;
-          navigate('/preview', {
-            state: {
-              documentCode: documentCodes[0],
-              processedDocumentId: processedDocumentId
+      // 2. 只对成功提交的文档进行轮询
+      const processingList = results.filter(r => r.success).map(r => ({
+        documentCode: r.documentCode,
+        processedId: r.data.processed_document?.id
+      })).filter(r => r.processedId);
+
+      // 启动轮询
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (processingList.length > 0) {
+        pollingRef.current = setInterval(async () => {
+          try {
+            // 并发请求所有文档状态
+            const statusArr = await Promise.all(
+              processingList.map(item => getProcessedDocumentInfo(item.processedId))
+            );
+            // 检查是否全部完成
+            const allCompleted = statusArr.every(info => info.status === 'completed');
+            if (allCompleted) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+              alert(`成功处理 ${processingList.length} 个文档！`);
+              // 跳转，无论单个还是批量都跳转到Preview
+              navigate('/preview', {
+                state: {
+                  documentCode: processingList[0].documentCode,
+                  processedDocumentId: processingList[0].processedId
+                }
+              });
             }
-          });
-        } else {
-          // 批量处理完成，返回Dashboard页面
-          window.selectedDocuments = [];
-          window.selectedDocumentCodes = [];
-          window.selectedDocumentCode = null;
-          navigate('/dashboard');
-        }
+          } catch {
+            // 失败时不终止轮询
+          }
+        }, 3000);
       }
     } catch (err) {
-      console.error('处理失败:', err);
       setError(err.message || '处理失败');
     } finally {
       setLoading(false);
@@ -358,6 +363,7 @@ export default function Config() {
 
     setLoading(true);
     setError('');
+    navigate('/preview'); // 新增：立即跳转到预览界面
 
     try {
       // 批量处理所有选中的文档
@@ -389,7 +395,6 @@ export default function Config() {
         setError(`部分文档处理失败，成功处理 ${successCount}/${totalCount} 个文档`);
       } else {
         // 全部成功，显示成功消息
-        alert(`成功处理 ${successCount} 个文档！`);
         // 清空选中的文档
         window.selectedDocuments = [];
         window.selectedDocumentCodes = [];
@@ -402,8 +407,6 @@ export default function Config() {
               processedDocumentId: results[0].data.processed_document.id
             }
           });
-        } else {
-          navigate('/dashboard'); // 兜底
         }
       }
     } catch (err) {
@@ -413,6 +416,16 @@ export default function Config() {
       setLoading(false);
     }
   }
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, []);
 
   // 字段渲染函数，避免重复
   function renderField(field, group, selected, handleFieldCheck, handleMethodChange, handleMosaicSizeChange, handleBlurKernelChange, handleColorChange) {

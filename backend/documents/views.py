@@ -22,6 +22,7 @@ import asyncio
 from time import time
 import logging
 logger = logging.getLogger(__name__)
+from django.db import IntegrityError, transaction
 
 def calculate_file_hash(file):
     """计算文件的MD5哈希值"""
@@ -64,61 +65,85 @@ def check_duplicate_file(user, file_hash, filename, file_size):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def upload_document(request):
-    """上传文档API"""
+    """
+    上传文档API（多端并发安全版）
+    """
     try:
-        # 验证上传数据
         serializer = DocumentUploadSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
         uploaded_file = serializer.validated_data['file']
-        
-        # 计算文件哈希
-        file_hash = calculate_file_hash(uploaded_file)
-        
-        # 检查是否为重复文件
-        duplicate_check = check_duplicate_file(request.user, file_hash, uploaded_file.name, uploaded_file.size)
-        
-        if duplicate_check['is_duplicate']:
-            existing_doc = duplicate_check['existing_document']
-            doc_serializer = DocumentSerializer(existing_doc, context={'request': request})
+
+        # 先将文件内容读入内存，后续所有操作都用副本
+        uploaded_file.seek(0)
+        file_bytes = uploaded_file.read()
+        file_size = len(file_bytes)
+        file_name = uploaded_file.name
+        content_type = uploaded_file.content_type if hasattr(uploaded_file, 'content_type') else 'application/pdf'
+
+        # 计算hash
+        file_hash = hashlib.md5(file_bytes).hexdigest()
+
+        # 计算页数
+        try:
+            import fitz
+            doc = fitz.open(stream=file_bytes, filetype='pdf')
+            page_count = doc.page_count
+        except Exception:
+            page_count = 0
+
+        # 构造InMemoryUploadedFile用于保存
+        import io
+        from django.core.files.uploadedfile import InMemoryUploadedFile
+        file_stream = io.BytesIO(file_bytes)
+        uploaded_file_for_save = InMemoryUploadedFile(
+            file_stream, None, file_name, content_type, file_size, None
+        )
+
+        # 日志输出，便于多端并发调试
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"[UPLOAD] 当前用户: {request.user.id}, 用户名: {request.user.username}, 文件hash: {file_hash}, 文件名: {file_name}")
+
+        try:
+            from django.db import transaction, IntegrityError
+            with transaction.atomic():
+                document, created = Document.objects.get_or_create(
+                    user=request.user,
+                    file_hash=file_hash,
+                    defaults={
+                        'original_file': uploaded_file_for_save,
+                        'filename': file_name,
+                        'file_size': file_size,
+                        'page_count': page_count,
+                        'status': 'uploaded'
+                    }
+                )
+                if not created:
+                    doc_serializer = DocumentSerializer(document, context={'request': request})
+                    return Response({
+                        'success': False,
+                        'error': '文件已存在',
+                        'message': f'文件 "{file_name}" 已存在于您的文档列表中',
+                        'existing_document': doc_serializer.data,
+                        'duplicate_reason': 'file_content'
+                    }, status=status.HTTP_409_CONFLICT)
+        except IntegrityError:
+            document = Document.objects.get(user=request.user, file_hash=file_hash)
+            doc_serializer = DocumentSerializer(document, context={'request': request})
             return Response({
                 'success': False,
                 'error': '文件已存在',
-                'message': f'文件 "{uploaded_file.name}" 已存在于您的文档列表中',
+                'message': f'文件 "{file_name}" 已存在于您的文档列表中',
                 'existing_document': doc_serializer.data,
-                'duplicate_reason': duplicate_check['reason']
+                'duplicate_reason': 'file_content'
             }, status=status.HTTP_409_CONFLICT)
-        
-        # 读取PDF页数
-        page_count = 0
-        try:
-            uploaded_file.seek(0)
-            doc = fitz.open(stream=uploaded_file.read(), filetype='pdf')
-            page_count = doc.page_count
-            uploaded_file.seek(0)
-        except Exception as e:
-            page_count = 0
-        
-        # 创建文档记录
-        document = Document.objects.create(
-            user=request.user,
-            original_file=uploaded_file,
-            filename=uploaded_file.name,
-            file_size=uploaded_file.size,
-            file_hash=file_hash,
-            page_count=page_count,
-            status='uploaded'
-        )
-        
-        # 返回文档信息
         doc_serializer = DocumentSerializer(document, context={'request': request})
         return Response({
             'success': True,
             'message': '文档上传成功',
             'document': doc_serializer.data
         }, status=status.HTTP_201_CREATED)
-        
     except Exception as e:
         return Response({
             'success': False,
@@ -167,129 +192,58 @@ def get_document_detail(request, document_code):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def process_document(request):
-    """处理文档API"""
+    """
+    处理文档API（异步队列版）
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    from .tasks import process_document_task
+    # 验证请求数据
+    serializer = DocumentConfigSerializer(data=request.data)
+    if not serializer.is_valid():
+        logger.warning(f"[PROCESS] 配置无效: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    document_code = serializer.validated_data['document_code']
+    config = serializer.validated_data['config']
+    logger.warning(f"[PROCESS] 用户: {request.user.id}, 用户名: {request.user.username}, 文档: {document_code}, 配置: {config}")
+    # 获取文档
     try:
-        # 验证请求数据
-        serializer = DocumentConfigSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        document_code = serializer.validated_data['document_code']
-        config = serializer.validated_data['config']
-        
-        print(f"[DEBUG] 接收到的 config 参数: {config}")
-        # 获取文档
-        try:
-            document = Document.objects.get(document_code=document_code, user=request.user)
-        except Document.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': '文档不存在'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        # 生成配置哈希
-        config_str = json.dumps(config, sort_keys=True)
-        config_hash = hashlib.md5(config_str.encode()).hexdigest()
-        # 传递 user 和 document_code 给 process.py，确保路径唯一
-        config_with_user = dict(config)
-        config_with_user['__user'] = request.user.username
-        config_with_user['__document_code'] = document.document_code
-        process_result = process(document.get_storage_path(), config_with_user, config_hash)
-        print(f"[DEBUG] 传递给 process.py 的参数: 路径={document.get_storage_path()}, config={config}, config_hash={config_hash}")
-        
-        # 检查是否已有相同配置的处理结果
-        existing_processed = ProcessedDocument.objects.filter(
-            document=document,
-            config_hash=config_hash
-        ).first()
-        
-        if existing_processed:
-            # 如果已存在，直接返回
-            processed_serializer = ProcessedDocumentSerializer(
-                existing_processed, context={'request': request}
-            )
-            return Response({
-                'success': True,
-                'message': '使用缓存的处理结果',
-                'processed_document': processed_serializer.data
-            })
-        
-        # 创建新的处理记录
-        processed_doc = ProcessedDocument.objects.create(
-            document=document,
-            config_hash=config_hash,
-            config_data=config,
-            status='pending'
-        )
-        
-        # TODO: 这里应该启动异步任务进行实际处理
-        start_time = 0
-        # task = asyncio.create_task(process(document.get_storage_path(), config, config_hash))
-        logger.info(f"文件地址：{document.get_storage_path()}")
-        # 处理过程
-        processed_doc.status = 'processing'
-        processed_doc.save()
-        
-        # 处理完成
-        end_time = 1
-        if process_result and process_result.get('success'):
-            # 保存处理后PDF到processed_file字段
-            processed_pdf_path = process_result.get('processed_pdf_path')
-            if processed_pdf_path and os.path.exists(processed_pdf_path):
-                # 只保存相对路径，避免重复存储
-                rel_path = os.path.relpath(processed_pdf_path, 'media')
-                processed_doc.processed_file.name = rel_path.replace('\\', '/')
-            processed_doc.status = 'completed'
-            processed_doc.total_fields = len(config)
-            processed_doc.processing_time = end_time - start_time
-            processed_doc.save()
-            
-            # 基于实际处理结果创建处理日志
-            processing_results = process_result.get('processing_results', {})
-            successful_fields = 0
-            
-            for field_name, method in config.items():
-                # 获取实际的处理结果
-                field_result = processing_results.get(field_name, {})
-                detected_count = field_result.get('total_detected', 0)
-                confidence = field_result.get('confidence', 0.0)
-                
-                # 判断是否成功识别
-                is_success = detected_count > 0 and confidence > 0.6
-                
-                if is_success:
-                    successful_fields += 1
-                
-                method = "None" if method is None else method
-                ProcessingLog.objects.create(
-                    processed_document=processed_doc,
-                    field_name=field_name,
-                    field_type='custom',
-                    processing_method=method,
-                    status='success' if is_success else 'failed',
-                    confidence=confidence,
-                    processing_time=random.uniform(0.1, 0.8)
-                )
-            
-            # 更新处理记录的成功字段数
-            processed_doc.processed_fields = successful_fields
-            processed_doc.failed_fields = len(config) - successful_fields
-            processed_doc.save()
-            
-            processed_serializer = ProcessedDocumentSerializer(
-                processed_doc, context={'request': request}
-            )
-            
-            return Response({
-                'success': True,
-                'message': '文档处理完成',
-                'processed_document': processed_serializer.data
-            })
-    except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        document = Document.objects.get(document_code=document_code, user=request.user)
+    except Document.DoesNotExist:
+        logger.warning(f"[PROCESS] 文档不存在: {document_code} 用户: {request.user.id}")
+        return Response({'success': False, 'error': '文档不存在'}, status=status.HTTP_404_NOT_FOUND)
+    # 生成配置hash
+    import json, hashlib
+    config_str = json.dumps(config, sort_keys=True)
+    config_hash = hashlib.md5(config_str.encode()).hexdigest()
+    # 检查是否已有相同配置的处理结果
+    existing_processed = ProcessedDocument.objects.filter(document=document, config_hash=config_hash).first()
+    if existing_processed:
+        logger.warning(f"[PROCESS] 使用缓存结果: processed_id={existing_processed.id}")
+        processed_serializer = ProcessedDocumentSerializer(existing_processed, context={'request': request})
+        return Response({'success': True, 'message': '使用缓存的处理结果', 'processed_document': processed_serializer.data})
+    # 创建新的处理记录
+    processed_doc = ProcessedDocument.objects.create(
+        document=document,
+        config_hash=config_hash,
+        config_data=config,
+        status='pending'
+    )
+    # 分发Celery异步任务（全部用default队列）
+    task = process_document_task.apply_async(
+        args=[document.id, config, config_hash]
+        # 不指定queue，全部走default
+    )
+    logger.warning(f"[PROCESS] 分发Celery任务: document_id={document.id}, config_hash={config_hash}, queue=default, task_id={task.id}")
+    processed_doc.status = 'pending'
+    processed_doc.save()
+    return Response({
+        'success': True,
+        'message': '任务已提交，正在排队处理',
+        'task_id': task.id,
+        'processed_document_id': processed_doc.id,
+        'status': 'pending'
+    })
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -422,7 +376,7 @@ def preview_document(request, document_code, processed_id):
     from .models import Document, ProcessedDocument
     try:
         document = Document.objects.get(document_code=document_code, user=request.user)
-        processed = ProcessedDocument.objects.get(id=processed_id, document=document)
+        processed = ProcessedDocument.objects.get(id=processed_id, document__user=request.user, document=document)
         original_url = request.build_absolute_uri(document.original_file.url) if document.original_file else None
         processed_url = request.build_absolute_uri(processed.processed_file.url) if processed.processed_file else None
         # 可选：返回总页数

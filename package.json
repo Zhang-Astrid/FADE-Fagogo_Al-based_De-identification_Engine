@@ -7,10 +7,12 @@
     "frontend"
   ],
   "scripts": {
-    "FADE": "concurrently -k -s first \"npm run backend\" \"wait-on tcp:8000 && npm run frontend\"",
-    "backend": "cd backend && python manage.py runserver 8000",
+    "FADE": "concurrently -k -s first --names \"Backend,Frontend,Celery,OCR\" --prefix-colors \"green,blue,yellow,magenta\" \"npm run backend\" \"wait-on tcp:8000 && npm run frontend\" \"npm run ocr\" \"npm run celery\"",
+    "backend": "cd backend && python manage.py runserver 0.0.0.0:8000",
     "frontend": "cd frontend && npm run dev",
-    "dev": "npm run FADE",
+    "dev": "vite --host",
+    "ocr": "cd backend && python ocr_server.py",
+    "celery": "cd backend && celery -A backend worker -l info --pool=solo",
     "install:all": "npm install && cd frontend && npm install",
     "build": "cd frontend && npm run build",
     "lint": "cd frontend && npm run lint",

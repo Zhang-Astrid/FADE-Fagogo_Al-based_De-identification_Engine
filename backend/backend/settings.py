@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'legal_doc_redactor',
+        'NAME': 'fagogo',
         'USER': 'postgres',
         # 'PASSWORD': 'postgres',
         'PASSWORD': 'pc332940',
@@ -183,3 +183,12 @@ CORS_ALLOW_HEADERS = [
 ]
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# Celery 配置
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+# 可选：任务超时、重试等
+CELERY_TASK_SOFT_TIME_LIMIT = 600  # 单任务最大运行时间（秒）
+CELERY_TASK_ACKS_LATE = True
+CELERYD_PREFETCH_MULTIPLIER = 1

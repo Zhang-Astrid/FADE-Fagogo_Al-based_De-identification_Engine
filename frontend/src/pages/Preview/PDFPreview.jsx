@@ -109,6 +109,17 @@ export default function PDFPreview() {
     }
   };
 
+  // 状态转中文
+  function getStatusText(status) {
+    switch (status) {
+      case 'pending': return '正在处理';
+      case 'processing': return '正在处理';
+      case 'completed': return '已完成';
+      case 'failed': return '处理失败';
+      default: return status;
+    }
+  }
+
   return (
     <div className="preview-root">
       <h1 className="preview-title">文件预览与敏感信息校正</h1>
@@ -161,7 +172,7 @@ export default function PDFPreview() {
                     const methodName = methodMap[value] || value;
                     return `${fieldName}:${methodName}`;
                   }).join(', ')}</td>
-                <td>{item.status}</td>
+                <td>{getStatusText(item.status)}</td>
                 <td>
                   <button 
                     onClick={() => handleSelectProcessed(item)}
