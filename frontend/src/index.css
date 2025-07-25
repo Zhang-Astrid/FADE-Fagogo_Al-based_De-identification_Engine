@@ -172,20 +172,29 @@ App 根布局：使用Grid分为导航和内容区
   gap: 16px;
 }
 
+.dashboard-models-flex {
+  display: block;
+  margin-bottom: 8px;
+}
+.dashboard-model-block {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-bottom: 6px;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
 .dashboard-model-status {
   display: inline-block;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #bbb;
+  margin-right: 8px;
+  background: #4caf50;
 }
-
-.dashboard-model-status.ok {
-  background: #22c55e;
-}
-
 .dashboard-model-status.fail {
-  background: #ef4444;
+  background: #f44336;
 }
 
 .dashboard-stats {

@@ -171,9 +171,25 @@ export default function Dashboard() {
       <section className="dashboard-cards-grid">
         {/* 信息卡片 */}
         <article className="dashboard-info-card">
-          <div className="dashboard-info-row">
-            <span className={`dashboard-model-status ${modelStatus.status === '正常运行' ? 'ok' : 'fail'}`}></span>
-            <span>{modelStatus.name} <strong>{modelStatus.status}</strong> / {modelStatus.mode}</span>
+          <div className="dashboard-info-row dashboard-models-flex">
+            {modelStatus.ocr && (
+              <div className="dashboard-model-block">
+                <span className={`dashboard-model-status ${modelStatus.ocr.status === '正常运行' ? 'ok' : 'fail'}`}></span>
+                <span>OCR: {modelStatus.ocr.name} <strong>{modelStatus.ocr.status}</strong> / {modelStatus.ocr.mode}</span>
+              </div>
+            )}
+            {modelStatus.ner && (
+              <div className="dashboard-model-block">
+                <span className={`dashboard-model-status ${modelStatus.ner.status === '正常运行' ? 'ok' : 'fail'}`}></span>
+                <span>NER: {modelStatus.ner.name} <strong>{modelStatus.ner.status}</strong> / {modelStatus.ner.mode}</span>
+              </div>
+            )}
+            {modelStatus.llm && (
+              <div className="dashboard-model-block">
+                <span className={`dashboard-model-status ${modelStatus.llm.status === '正常运行' ? 'ok' : 'fail'}`}></span>
+                <span>LLM: {modelStatus.llm.name} <strong>{modelStatus.llm.status}</strong> / {modelStatus.llm.mode}</span>
+              </div>
+            )}
           </div>
           <div className="dashboard-stats">
             <div>
@@ -182,7 +198,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="dashboard-stats-num">
-                {console.log('【DEBUG】平均处理用时 avg_time_per_mb:', todayStats.avg_time_per_mb)}
+                {/* {console.log('【DEBUG】平均处理用时 avg_time_per_mb:', todayStats.avg_time_per_mb)} */}
                 {todayStats.avg_time_per_mb} 秒/MB
               </div>
               <div className="dashboard-stats-label">平均处理用时</div>

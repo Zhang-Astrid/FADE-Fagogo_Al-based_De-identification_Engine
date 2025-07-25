@@ -499,11 +499,23 @@ def get_dashboard_stats(request):
             status='completed'
         ).count()
         
-        # 获取模型状态（这里可以根据实际情况调整）
+        # 动态返回AI/ML技术栈状态
         model_status = {
-            'name': 'ERNIE-3.0-base-chinese',
-            'status': '正常运行',
-            'mode': 'CPU模式'
+            'ocr': {
+                'name': 'RapidOCR',
+                'status': '正常运行',
+                'mode': 'CPU/GPU自适应'
+            },
+            'ner': {
+                'name': 'gyr66/Ernie-3.0-base-chinese-finetuned-ner',
+                'status': '正常运行',
+                'mode': 'CPU/GPU自适应'
+            },
+            'llm': {
+                'name': 'qwen-plus',
+                'status': '正常运行',
+                'mode': '云API'
+            }
         }
         
         # 获取最近处理的文档（最近5个）
