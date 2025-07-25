@@ -3,3 +3,6 @@ frontend/node_modules
 ner
 backend/media/
 .idea
+backend/clear_documents.py
+backend/setup_database.py
+cleanup.js
