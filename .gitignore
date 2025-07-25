@@ -6,3 +6,4 @@ backend/media/
 backend/clear_documents.py
 backend/setup_database.py
 cleanup.js
+backend/settings.py
