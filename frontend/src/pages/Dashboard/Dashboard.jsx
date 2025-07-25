@@ -5,7 +5,7 @@ import UploadList from "./UploadList";
 export default function Dashboard() {
   // 状态管理
   const [modelStatus, setModelStatus] = useState({ name: "轻量模型 v1.2", status: "正常运行", mode: "CPU模式" });
-  const [todayStats, setTodayStats] = useState({ total: 0, successRate: 0 });
+  const [todayStats, setTodayStats] = useState({ total: 0, avg_time_per_mb: 0 });
   const [recentRecords, setRecentRecords] = useState([]);
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploadStatus, setUploadStatus] = useState([]);
@@ -46,7 +46,7 @@ export default function Dashboard() {
         // 正确映射后端返回的字段名
         const mappedStats = {
           total: result.stats.total,
-          successRate: result.stats.success_rate  // 映射下划线格式到驼峰格式
+          avg_time_per_mb: result.stats.avg_time_per_mb
         };
         
         console.log('📊 映射后的stats数据:', mappedStats);
@@ -181,8 +181,11 @@ export default function Dashboard() {
               <div className="dashboard-stats-label">今日处理总数</div>
             </div>
             <div>
-              <div className="dashboard-stats-num">{todayStats.successRate}%</div>
-              <div className="dashboard-stats-label">敏感字段识别成功率</div>
+              <div className="dashboard-stats-num">
+                {console.log('【DEBUG】平均处理用时 avg_time_per_mb:', todayStats.avg_time_per_mb)}
+                {todayStats.avg_time_per_mb} 秒/MB
+              </div>
+              <div className="dashboard-stats-label">平均处理用时</div>
             </div>
           </div>
           <div className="dashboard-recent">

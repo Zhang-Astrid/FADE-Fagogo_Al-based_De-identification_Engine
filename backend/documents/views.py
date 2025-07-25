@@ -499,21 +499,6 @@ def get_dashboard_stats(request):
             status='completed'
         ).count()
         
-        # 基于ProcessingLog计算敏感字段识别成功率
-        today_logs = ProcessingLog.objects.filter(
-            processed_document__document__user=request.user,
-            processed_document__process_time__gte=today_start,
-            processed_document__process_time__lte=today_end
-        )
-        
-        total_fields = today_logs.count()
-        successful_fields = today_logs.filter(status='success').count()
-        
-        # 计算成功率
-        success_rate = 0
-        if total_fields > 0:
-            success_rate = round((successful_fields / total_fields) * 100, 1)
-        
         # 获取模型状态（这里可以根据实际情况调整）
         model_status = {
             'name': 'ERNIE-3.0-base-chinese',
@@ -546,11 +531,23 @@ def get_dashboard_stats(request):
                 'status': status
             })
         
+        # 今日已完成处理的所有记录
+        today_completed_docs = ProcessedDocument.objects.filter(
+            document__user=request.user,
+            process_time__gte=today_start,
+            process_time__lte=today_end,
+            status='completed'
+        )
+        total_processing_time = sum([doc.processing_time for doc in today_completed_docs])
+        total_file_size = sum([doc.document.file_size for doc in today_completed_docs])
+        total_file_size_mb = total_file_size / (1024 * 1024) if total_file_size > 0 else 0
+        avg_time_per_mb = round(total_processing_time / total_file_size_mb, 2) if total_file_size_mb > 0 else 0
+        
         return Response({
             'success': True,
             'stats': {
                 'total': today_processed,
-                'success_rate': success_rate
+                'avg_time_per_mb': avg_time_per_mb
             },
             'model_status': model_status,
             'recent_records': recent_records

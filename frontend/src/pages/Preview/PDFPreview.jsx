@@ -15,7 +15,12 @@ export default function PDFPreview() {
   const [previewData, setPreviewData] = useState(null);
   const [documentInfo, setDocumentInfo] = useState(null);
   const [processedList, setProcessedList] = useState([]);
-  const [selectedProcessed, setSelectedProcessed] = useState(null);
+  const [selectedProcessedId, setSelectedProcessedId] = useState(null); // 只存id
+  // 获取当前选中项
+  const selectedProcessed = processedList.find(item => item.id === selectedProcessedId);
+  // 记录上一次选中记录的状态
+  const [lastSelectedStatus, setLastSelectedStatus] = useState(null);
+  const [rowHighlight, setRowHighlight] = useState({}); // {id: true/false}
   
   const navigate = useNavigate();
 
@@ -26,14 +31,68 @@ export default function PDFPreview() {
 
   // 处理记录加载后，自动选中最新一条
   useEffect(() => {
-    if (processedList.length > 0) {
-      setSelectedProcessed(processedList[0]);
-      loadPreviewData(processedList[0].document.document_code, processedList[0].id);
-    } else {
-      setSelectedProcessed(null);
-      setPreviewData(null);
-      setDocumentInfo(null);
+    if (processedList.length > 0 && selectedProcessedId == null) {
+      setSelectedProcessedId(processedList[0].id);
     }
+  }, [processedList]);
+
+  // 用户点击“预览”按钮
+  const handleSelectProcessed = (item) => {
+    setSelectedProcessedId(item.id);
+  };
+
+  // 只在selectedProcessedId变化或状态变化时加载预览数据
+  useEffect(() => {
+    if (!selectedProcessed) return;
+    setLastSelectedStatus(selectedProcessed.status);
+    loadPreviewData(selectedProcessed.document.document_code, selectedProcessed.id);
+    // eslint-disable-next-line
+  }, [selectedProcessedId]);
+
+  // 检测当前选中记录的状态由processing/pending变为completed时，自动刷新预览区
+  useEffect(() => {
+    if (!selectedProcessed) return;
+    if (
+      (lastSelectedStatus === 'pending' || lastSelectedStatus === 'processing') &&
+      selectedProcessed.status === 'completed'
+    ) {
+      loadPreviewData(selectedProcessed.document.document_code, selectedProcessed.id);
+    }
+    setLastSelectedStatus(selectedProcessed.status);
+  }, [selectedProcessed, lastSelectedStatus]);
+
+  // 智能轮询：只在有未完成的记录时轮询
+  useEffect(() => {
+    const hasProcessing = processedList.some(
+      item => item.status === 'pending' || item.status === 'processing'
+    );
+    if (!hasProcessing) return; // 没有需要处理的就不轮询
+
+    const interval = setInterval(() => {
+      loadProcessedList(); // 只刷新列表，不刷新预览区
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [processedList]);
+
+  // 检查处理状态变化，给刚完成的行高亮+动画
+  useEffect(() => {
+    if (processedList.length === 0) return;
+    // 构建当前状态map
+    const currStatusMap = {};
+    processedList.forEach(item => {
+      currStatusMap[item.id] = item.status;
+    });
+    // 检查哪些id的状态发生了变化
+    Object.entries(currStatusMap).forEach(([id, status]) => {
+      const prev = lastSelectedStatus && selectedProcessed && selectedProcessed.id === Number(id) ? lastSelectedStatus : undefined;
+      if ((prev === 'pending' || prev === 'processing') && status === 'completed') {
+        setRowHighlight(h => ({ ...h, [id]: true }));
+        setTimeout(() => {
+          setRowHighlight(h => ({ ...h, [id]: false }));
+        }, 2000);
+      }
+    });
   }, [processedList]);
 
   // 加载所有处理记录
@@ -42,19 +101,13 @@ export default function PDFPreview() {
       const result = await getUserProcessedDocuments();
       if (result.success) {
         setProcessedList(result.processed_documents);
-        console.log('[前端DEBUG] 已获取处理结果列表:', result.processed_documents);
+        // console.log('[前端DEBUG] 已获取处理结果列表:', result.processed_documents);
       } else {
         console.warn('[前端DEBUG] 获取处理结果列表失败:', result);
       }
     } catch (err) {
       console.error('获取处理结果列表失败:', err);
     }
-  };
-
-  // 切换选中处理记录
-  const handleSelectProcessed = (item) => {
-    setSelectedProcessed(item);
-    loadPreviewData(item.document.document_code, item.id);
   };
 
   // 加载预览数据
@@ -143,7 +196,10 @@ export default function PDFPreview() {
           </thead>
           <tbody>
             {processedList.map(item => (
-              <tr key={item.id} className={selectedProcessed && selectedProcessed.id === item.id ? 'selected' : ''}>
+              <tr key={item.id} className={
+                (selectedProcessed && selectedProcessed.id === item.id ? 'selected ' : '') +
+                (rowHighlight[item.id] ? 'highlight-animate ' : '')
+              }>
                 <td>{item.document.filename}</td>
                 <td>{item.process_time ? new Date(item.process_time).toLocaleString() : '-'}</td>
                 <td>{Object.entries(item.config_data)
@@ -237,7 +293,7 @@ export default function PDFPreview() {
                     />
                   ) : (
                     <div className="preview-pdf-placeholder">
-                      <span className="pdf-label redact">脱敏图</span> PDF预览
+                      <span className="pdf-label redact">正在处理 请稍后...</span> PDF预览
                     </div>
                   )}
                 </div>

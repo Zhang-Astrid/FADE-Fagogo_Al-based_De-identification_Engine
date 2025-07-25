@@ -10,12 +10,17 @@ def process_document_task(self, document_id, config, config_hash):
     try:
         doc = Document.objects.get(id=document_id)
         root_path = doc.get_storage_path()
+        import time
+        start_time = time.time()
         process(root_path, config, config_hash)
+        end_time = time.time()
+        elapsed = end_time - start_time
         # 查找对应的ProcessedDocument
         processed_doc = ProcessedDocument.objects.get(document=doc, config_hash=config_hash)
         processed_pdf_name = f"processed_{config_hash}.pdf"
         processed_doc.processed_file.name = f"{doc.user.username}/{doc.document_code}/{processed_pdf_name}"
         processed_doc.status = 'completed'
+        processed_doc.processing_time = elapsed
         processed_doc.save()
         return {'status': 'success', 'document_id': document_id}
     except Exception as e:
